@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity"
+    android:id="@+id/relativeLayout">
+
+    <GridLayout
+        android:id="@+id/gridLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:rowCount="4"
+        android:columnCount="2"
+        android:background="#dbdbdb">
+
+
+        <TextView
+            style="@style/StanNazwa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stan"
+            android:layout_rowSpan="2"
+            android:layout_row="0"
+            android:layout_column="0"
+            android:textSize="40sp"
+            android:gravity="center_horizontal|bottom"/>
+
+        <TextView
+            android:id="@+id/textViewStanIlosc"
+            style="@style/StanIlosc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:layout_rowSpan="2"
+            android:layout_row="2"
+            android:layout_column="0"
+            android:textSize="50sp"
+            android:gravity="center_horizontal|top"/>
+
+        <TextView
+            style="@style/StanNazwa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wydatki"
+            android:layout_row="0"
+            android:layout_column="1" />
+
+        <TextView
+            android:id="@+id/textViewWydatkiIlosc"
+            style="@style/StanIlosc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:layout_row="1"
+            android:layout_column="1"
+            />
+
+        <TextView
+            style="@style/StanNazwa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Przychód"
+            android:layout_row="2"
+            android:layout_column="1"
+            />
+
+        <TextView
+            android:id="@+id/textViewPrzychodIlosc"
+            style="@style/StanIlosc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:layout_row="3"
+            android:layout_column="1"
+            />
+    </GridLayout>
+
+    <ScrollView
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:layout_below="@id/gridLayout1"
+       android:layout_above="@id/linearLayoutPrzyciski">
+
+       <TableLayout
+           android:id="@+id/tableLayout"
+           android:layout_width="match_parent"
+           android:layout_height="wrap_content">
+
+           <TableRow>
+               <TextView
+                   android:id="@+id/textViewTytul"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:layout_weight="2"
+                   android:text="Tytuł"
+                   style="@style/TableHeader"
+                   android:onClick="onClickTitle"/>
+
+               <TextView
+                   android:id="@+id/textViewKwota"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:layout_weight="1"
+                   android:text="Kwota"
+                   android:maxEms="2"
+                   style="@style/TableHeader"
+                   android:onClick="onClickValue"/>
+
+               <TextView
+                   android:id="@+id/textData"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:layout_weight="1"
+                   android:text="Data"
+                   android:maxEms="3"
+                   style="@style/TableHeader"/>
+           </TableRow>
+
+
+
+
+       </TableLayout>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/linearLayoutPrzyciski"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true">
+
+
+        <Button
+            android:id="@+id/buttonDodajWydatek"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Dodaj wydatek"
+            android:layout_weight="1"
+            android:onClick="onClickWydatek"/>
+
+        <Button
+            android:id="@+id/buttonDodajPrzychod"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Dodaj przychód"
+            android:layout_weight="1"
+            android:onClick="onClickPrzychod"/>
+
+    </LinearLayout>
+
+</RelativeLayout>

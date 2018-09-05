@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".dodaj"
+    android:orientation="vertical">
+
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tytuł"
+        android:textColor="#4e6ec6"
+        android:textSize="20sp"
+        android:gravity="start" />
+
+    <EditText
+        android:id="@+id/editTextTytulDodaj"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kwota"
+        android:textColor="#4e6ec6"
+        android:textSize="20sp"
+        android:gravity="start" />
+
+
+    <EditText
+        android:id="@+id/editTextKwotaDodaj"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Data"
+            android:textColor="#4e6ec6"
+            android:textSize="20sp"
+            android:gravity="start"
+            android:layout_marginRight="15dp"/>
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#4e6ec6"
+            app:srcCompat="@android:drawable/ic_menu_my_calendar"
+            android:onClick="onClickCalendar"/>
+
+
+    </LinearLayout>
+
+
+    <EditText
+        android:id="@+id/editTextDataDodaj"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="DD.MM.YYYY" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+
+        <Button
+            android:id="@+id/buttonDodajWydatek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Dodaj"
+            android:onClick="onClickDodaj"/>
+
+        <Button
+            android:id="@+id/buttonAnulujWydatek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Anuluj"
+            android:onClick="onClickAnuluj"/>
+
+
+    </LinearLayout>
+
+</LinearLayout>
