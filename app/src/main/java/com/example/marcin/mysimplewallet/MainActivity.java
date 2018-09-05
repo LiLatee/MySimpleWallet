@@ -13,7 +13,9 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import java.util.Date;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -21,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.text.SimpleDateFormat;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -56,7 +59,8 @@ public class MainActivity extends AppCompatActivity
         String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
                 "Title VARCHAR," +
-                "Value DOUBLE NOT NULL, Date DATE," +
+                "Value DOUBLE NOT NULL, " +
+                "Date DATE," +
                 "IncomeOrOutgo INTEGER NOT NULL)";
         db.execSQL(sqlDB);
 
@@ -74,6 +78,23 @@ public class MainActivity extends AppCompatActivity
                 String value = cursor.getString(cursor.getColumnIndex("Value"));
                 String date = cursor.getString(cursor.getColumnIndex("Date"));
                 int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+
+
+                /*String OLD_FORMAT = "E MMM dd HH:mm:ss z yyyy";
+                String NEW_FORMAT = "dd/MM/yyyy";
+                SimpleDateFormat sdf = new SimpleDateFormat(OLD_FORMAT);
+                Date d = null;
+                try
+                {
+                    d = sdf.parse(date);
+                }
+                catch (Exception e)
+                {
+
+                }
+                sdf.applyPattern(NEW_FORMAT);
+                String newDateString = sdf.format(d);*/
+
 
                 registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
 
@@ -154,13 +175,11 @@ public class MainActivity extends AppCompatActivity
             if (Data.hasExtra("data"))
                 data = Data.getExtras().getString("data");
 
-            Log.d("pies", kwota);
-
             if(!kwota.isEmpty())
             {
+
                 addNewRow(tytul, kwota, data, 0);
                 addToDatabase(tytul, kwota, data, 0);
-
 
                 TextView stan = (TextView) findViewById(R.id.textViewStanIlosc);
                 double kwotaD = Double.parseDouble(stan.getText().toString());
@@ -185,6 +204,7 @@ public class MainActivity extends AppCompatActivity
 
             if(!kwota.isEmpty())
             {
+
                 addNewRow(tytul, kwota, data, 1);
                 addToDatabase(tytul, kwota, data, 1);
 
@@ -226,7 +246,11 @@ public class MainActivity extends AppCompatActivity
 
         TextView textViewData = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
         textViewData.setMaxEms(2);
-        textViewData.setText(data);
+
+        // Changes data show format from yyyy/mm/dd to dd/mm/yy
+        String a = data.substring(2,4);
+        String b = data.substring(8,10);
+        textViewData.setText(b + data.substring(4,8) + a);
         textViewData.setLayoutParams(size);
         tableRow.addView(textViewData);
 
@@ -336,8 +360,22 @@ public class MainActivity extends AppCompatActivity
         addHeaderRow();
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+    }
 
-        /*// Creates database if not exists.
+    public void onClickValue(View view)
+    {
+        String sqlQuery = null;
+        if (valueState == 0)
+        {
+            valueState = 1;
+            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value ASC";
+        }
+        else
+        {
+            valueState = 0;
+            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value DESC";
+        }
+        // Creates database if not exists.
         db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
         String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
@@ -346,10 +384,9 @@ public class MainActivity extends AppCompatActivity
                 "IncomeOrOutgo INTEGER NOT NULL)";
         db.execSQL(sqlDB);
 
-
         // Loads data from database.
         ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+        Cursor cursor = db.rawQuery(sqlQuery, null);
 
         if (cursor.moveToFirst())
         {
@@ -366,31 +403,6 @@ public class MainActivity extends AppCompatActivity
             } while (cursor.moveToNext());
         }
 
-        ArrayList<Registration> sortedRegistrations = new ArrayList<Registration>();
-        Map<Integer, String> unsortedMap = new HashMap<Integer, String>();
-        for (Registration x : registrations)
-            unsortedMap.put(x.id, x.title);
-        Map<Integer, String> sortedMap = sortByValue(unsortedMap);
-        if (titleState == 0)
-        {
-            titleState = 1;
-            for (Map.Entry<Integer, String> entry : sortedMap.entrySet())
-            {
-                for (Registration x : registrations)
-                    if (x.id == entry.getKey())
-                        sortedRegistrations.add(0, x); // Adds to the begin of map.
-            }
-        }
-        else
-        {
-            titleState = 0;
-            for (Map.Entry<Integer, String> entry : sortedMap.entrySet())
-            {
-                for (Registration x : registrations)
-                    if (x.id == entry.getKey())
-                        sortedRegistrations.add(x); // Adds to the end of map.
-            }
-        }
         // Clears all table's rows.
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         int count = tableLayout.getChildCount();
@@ -400,24 +412,22 @@ public class MainActivity extends AppCompatActivity
         }
 
         addHeaderRow();
-        for (Registration x : sortedRegistrations)
+        for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
-
-            */
     }
 
-    public void onClickValue(View view)
+    public void onClickDate(View view)
     {
         String sqlQuery = null;
-        if (titleState == 0)
+        if (dateState == 0)
         {
-            titleState = 1;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value ASC";
+            dateState = 1;
+            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Date ASC";
         }
         else
         {
-            titleState = 0;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value DESC";
+            dateState = 0;
+            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Date DESC";
         }
         // Creates database if not exists.
         db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
@@ -459,74 +469,6 @@ public class MainActivity extends AppCompatActivity
         addHeaderRow();
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
-
-       /* // Creates database if not exists.
-        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                "Title VARCHAR," +
-                "Value DOUBLE NOT NULL, Date DATE," +
-                "IncomeOrOutgo INTEGER NOT NULL)";
-        db.execSQL(sqlDB);
-
-
-        // Loads data from database.
-        ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-        if (cursor.moveToFirst())
-        {
-            do
-            {
-                int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                String title = cursor.getString(cursor.getColumnIndex("Title"));
-                String value = cursor.getString(cursor.getColumnIndex("Value"));
-                String date = cursor.getString(cursor.getColumnIndex("Date"));
-                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-
-            } while (cursor.moveToNext());
-        }
-
-        ArrayList<Registration> sortedRegistrations = new ArrayList<Registration>();
-        Map<Integer, String> unsortedMap = new HashMap<Integer, String>();
-        for (Registration x : registrations)
-                unsortedMap.put(x.id, x.value);
-
-        Map<Integer, String> sortedMap = sortByValue(unsortedMap);
-        if (titleState == 0)
-        {
-            titleState = 1;
-            for (Map.Entry<Integer, String> entry : sortedMap.entrySet())
-            {
-                for (Registration x : registrations)
-                    if (x.id == entry.getKey())
-                        sortedRegistrations.add(0, x); // Adds to the begin of map.
-            }
-        }
-        else
-        {
-            titleState = 0;
-            for (Map.Entry<Integer, String> entry : sortedMap.entrySet())
-            {
-                for (Registration x : registrations)
-                    if (x.id == entry.getKey())
-                        sortedRegistrations.add(x); // Adds to the end of map.
-            }
-        }
-        // Clears all table's rows.
-        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        int count = tableLayout.getChildCount();
-        for (int i = 0; i < count; i++) {
-            View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
-        }
-
-        addHeaderRow();
-        for (Registration x : sortedRegistrations)
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
-        */
     }
 
     private static Map<Integer, String> sortByValue(Map<Integer, String> unsortMap) {

@@ -117,7 +117,8 @@
                    android:layout_weight="1"
                    android:text="Data"
                    android:maxEms="3"
-                   style="@style/TableHeader"/>
+                   style="@style/TableHeader"
+                   android:onClick="onClickDate"/>
            </TableRow>
 
 
