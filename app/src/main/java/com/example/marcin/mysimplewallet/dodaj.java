@@ -56,22 +56,6 @@ public class dodaj extends AppCompatActivity
 
         Calendar calendar = Calendar.getInstance();
 
-        /*SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
-        Date date = null;
-        try
-        {
-            date = calendar.getTime();
-
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-
-        String data = formatter.format(date);*/
-
-
-
-
         int day = calendar.get(Calendar.DAY_OF_MONTH);
         int month = calendar.get(Calendar.MONTH);
         int year = calendar.get(Calendar.YEAR);

@@ -1,29 +1,34 @@
 package com.example.marcin.mysimplewallet;
 
+import android.app.DatePickerDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.DatePicker;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import java.util.Date;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -117,7 +122,6 @@ public class MainActivity extends AppCompatActivity
         TextView textViewPrzychod = (TextView) findViewById(R.id.textViewPrzychodIlosc);
         textViewPrzychod.setText(przychod);
     }
-
     @Override
     protected void onPause()
     {
@@ -139,7 +143,6 @@ public class MainActivity extends AppCompatActivity
 
     static final int REQUEST_CODE_WYDATEK = 0;
     static final int REQUEST_CODE_PRZYCHOD = 1;
-
     public void onClickWydatek(View view)
     {
         Intent i = new Intent(this, dodaj.class);
@@ -149,7 +152,6 @@ public class MainActivity extends AppCompatActivity
         startActivityForResult(i, REQUEST_CODE_WYDATEK);
 
     }
-
     public void onClickPrzychod(View view)
     {
         Intent i = new Intent(this, dodaj.class);
@@ -265,20 +267,6 @@ public class MainActivity extends AppCompatActivity
 
 
     }
-
-    public void addToDatabase(String title, String value, String date, int incomeOrOutgo)
-    {
-        String sqlQuery =  null;
-        sqlQuery = "INSERT INTO IncomeOutgo(Title, Value, Date, IncomeOrOutgo) VALUES (" +
-                "\"" + title + "\"," +
-                "\"" + value + "\"," +
-                "\"" + date + "\"," +
-                "\"" + incomeOrOutgo + "\")";
-
-        db.execSQL(sqlQuery);
-
-    }
-
     public void addHeaderRow()
     {
         TableRow.LayoutParams size = new TableRow.LayoutParams();
@@ -301,6 +289,18 @@ public class MainActivity extends AppCompatActivity
 
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         tableLayout.addView(tableRow,0);
+    }
+    public void addToDatabase(String title, String value, String date, int incomeOrOutgo)
+    {
+        String sqlQuery =  null;
+        sqlQuery = "INSERT INTO IncomeOutgo(Title, Value, Date, IncomeOrOutgo) VALUES (" +
+                "\"" + title + "\"," +
+                "\"" + value + "\"," +
+                "\"" + date + "\"," +
+                "\"" + incomeOrOutgo + "\")";
+
+        db.execSQL(sqlQuery);
+
     }
 
     int titleState = 0;
@@ -361,7 +361,6 @@ public class MainActivity extends AppCompatActivity
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
-
     public void onClickValue(View view)
     {
         String sqlQuery = null;
@@ -415,7 +414,6 @@ public class MainActivity extends AppCompatActivity
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
-
     public void onClickDate(View view)
     {
         String sqlQuery = null;
@@ -470,36 +468,112 @@ public class MainActivity extends AppCompatActivity
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
+    EditText textViewFrom = null;
+    EditText textViewTo = null;
+    public void onClickFilter(MenuItem item)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        // Get the layout inflater
+        LayoutInflater inflater = this.getLayoutInflater();
+        View view = inflater.inflate(R.layout.filter, null);
 
-    private static Map<Integer, String> sortByValue(Map<Integer, String> unsortMap) {
+        // Inflate and set the layout for the dialog
+        // Pass null as the parent view because its going in the dialog layout
+        builder.setView(view)
+                // Add action buttons
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id)
+                    {
+                        Toast.makeText(getBaseContext(), "Hejka", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("ANULUJ", new DialogInterface.OnClickListener()
+                {
+                    public void onClick(DialogInterface dialog, int id) {
+                        Toast.makeText(getBaseContext(), "ANULUJ", Toast.LENGTH_SHORT).show();
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
 
-        // 1. Convert Map to List of Map
-        List<Map.Entry<Integer, String>> list =
-                new LinkedList<Map.Entry<Integer, String>>(unsortMap.entrySet());
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
+        Date date = null;
+        try {date = calendar.getTime(); } catch (Exception e) {e.printStackTrace();}
+        String data = formatter.format(date);
 
-        // 2. Sort list with Collections.sort(), provide a custom Comparator
-        //    Try switch the o1 o2 position for a different order
-        Collections.sort(list, new Comparator<Map.Entry<Integer, String>>() {
-            public int compare(Map.Entry<Integer, String> o1,
-                               Map.Entry<Integer, String> o2) {
-                return (o1.getValue()).compareTo(o2.getValue());
+
+        textViewFrom = (EditText) view.findViewById(R.id.editTextFrom);
+        textViewFrom.setText(data);
+
+        textViewTo = (EditText) view.findViewById(R.id.editTextTo);
+        textViewTo.setText(data);
+    }
+
+    public void onClickCalendar(View view)
+    {
+        final View view2 = view;
+        DatePickerDialog.OnDateSetListener listener = new DatePickerDialog.OnDateSetListener()
+        {
+            @Override
+            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth)
+            {
+                String dayS = Integer.toString(dayOfMonth);
+                String monthS = Integer.toString(month + 1);
+
+                if (month + 1 < 10)
+                    monthS = "0" + monthS;
+                if (dayOfMonth < 10)
+                    dayS = "0" + dayS;
+
+
+
+                if (view2.getTag().toString().equals("from"))
+                {
+                    textViewFrom.setText((year) + "/" + monthS + "/" + dayS);
+                } else
+                {
+                    textViewTo.setText((year) + "/" + monthS + "/" + dayS);
+                }
             }
-        });
+        };
 
-        // 3. Loop the sorted list and put it into a new insertion order Map LinkedHashMap
-        Map<Integer, String> sortedMap = new LinkedHashMap<Integer, String>();
-        for (Map.Entry<Integer, String> entry : list) {
-            sortedMap.put(entry.getKey(), entry.getValue());
-        }
+        Calendar calendar = Calendar.getInstance();
 
-        /*
-        //classic iterator example
-        for (Iterator<Map.Entry<Integer, String>> it = list.iterator(); it.hasNext(); ) {
-            Map.Entry<Integer, String> entry = it.next();
-            sortedMap.put(entry.getKey(), entry.getValue());
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        int month = calendar.get(Calendar.MONTH);
+        int year = calendar.get(Calendar.YEAR);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this, 0, listener, year, month, day);
+        datePickerDialog.show();
+
+        String dayS = Integer.toString(datePickerDialog.getDatePicker().getDayOfMonth());
+        String monthS = Integer.toString(datePickerDialog.getDatePicker().getMonth() + 1);
+        year = datePickerDialog.getDatePicker().getYear();
+
+        if (month + 1 < 10)
+            monthS = "0" + monthS;
+        if (day < 10)
+            dayS = "0" + dayS;
+
+
+
+        /*if (view.getTag().toString().equals("from"))
+        {
+            EditText textViewFrom = (EditText) findViewById(R.id.editTextFrom);
+            textViewFrom.setText((year) + "/" + monthS + "/" + dayS);
+        } else
+        {
+            EditText textViewTo = (EditText) findViewById(R.id.editTextTo);
+            textViewTo.setText((year) + "/" + monthS + "/" + dayS);
         }*/
+    }
 
-
-        return sortedMap;
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.options_menu, menu);
+        return true;
     }
 }
