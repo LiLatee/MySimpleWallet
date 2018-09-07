@@ -32,7 +32,8 @@
             android:layout_height="wrap_content"
             android:text="po dacie"
             android:textSize="15sp"
-            android:checked="true" />
+            android:checked="true"
+            android:tag="byDate" />
 
 
         <RadioButton
@@ -40,7 +41,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="po kwocie"
-            android:textSize="15sp" />
+            android:textSize="15sp"
+            android:tag="byValue"/>
 
     </RadioGroup>
 
@@ -127,7 +129,7 @@
 
 
     <TextView
-        android:id="@+id/action_ok"
+        android:id="@+id/textViewOk"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="OK"
@@ -137,19 +139,21 @@
         android:layout_marginEnd="20dp"
         android:textSize="20sp"
         android:textColor="@color/colorAccent"
-        android:layout_marginBottom="20dp"/>
+        android:layout_marginBottom="20dp"
+        android:background="?attr/selectableItemBackground"/>
 
     <TextView
-        android:id="@+id/action_cancel"
+        android:id="@+id/textViewCancel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="CANCEL"
+        android:text="ANULUJ"
         android:textStyle="bold"
         android:layout_below="@id/editTextTo"
         android:layout_alignParentLeft="true"
         android:layout_marginStart="20dp"
         android:layout_marginBottom="20dp"
         android:textSize="20sp"
-        android:textColor="@color/colorAccent" />
+        android:textColor="@color/colorAccent"
+        android:background="?attr/selectableItemBackground"/>
 
 </RelativeLayout>

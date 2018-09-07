@@ -1,58 +1,28 @@
 package com.example.marcin.mysimplewallet;
 
-import android.app.DatePickerDialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
+
 
 public class MainActivity extends AppCompatActivity
 {
     private SQLiteDatabase db;
-    private class Registration
-    {
-        int id;
-        String title;
-        String value;
-        String date;
-        // 0 - outgo
-        // 1 - income
-        int incomeOrOutgo;
 
-        public Registration(int id, String title, String value, String date, int incomeOrOutgo)
-        {
-            this.id = id;
-            this.title = title;
-            this.value = value;
-            this.date = date;
-            this.incomeOrOutgo = incomeOrOutgo;
-        }
-
-    }
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -83,23 +53,6 @@ public class MainActivity extends AppCompatActivity
                 String value = cursor.getString(cursor.getColumnIndex("Value"));
                 String date = cursor.getString(cursor.getColumnIndex("Date"));
                 int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-
-                /*String OLD_FORMAT = "E MMM dd HH:mm:ss z yyyy";
-                String NEW_FORMAT = "dd/MM/yyyy";
-                SimpleDateFormat sdf = new SimpleDateFormat(OLD_FORMAT);
-                Date d = null;
-                try
-                {
-                    d = sdf.parse(date);
-                }
-                catch (Exception e)
-                {
-
-                }
-                sdf.applyPattern(NEW_FORMAT);
-                String newDateString = sdf.format(d);*/
-
 
                 registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
 
@@ -225,7 +178,7 @@ public class MainActivity extends AppCompatActivity
     // int wydatek_przychod
     // wydatek == 0
     // przychod == 1
-    private void addNewRow(String tytul, String kwota, String data, int wydatek_przychod)
+    public void addNewRow(String tytul, String kwota, String data, int wydatek_przychod)
     {
         TableRow tableRow = new TableRow(this);
         TableRow.LayoutParams size = new TableRow.LayoutParams();
@@ -468,14 +421,11 @@ public class MainActivity extends AppCompatActivity
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
-    EditText textViewFrom = null;
-    EditText textViewTo = null;
 
-    dialog_example dialogE;
     public void onClickFilter(MenuItem item)
     {
-        dialog_example dialog = new dialog_example();
-        dialog.show(getSupportFragmentManager(), "MyCustomDialog");
+        filter_dialog dialog = new filter_dialog();
+        dialog.show(getSupportFragmentManager(), "filterDialog");
     }
 
     @Override

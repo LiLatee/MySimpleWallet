@@ -55,7 +55,7 @@
             android:layout_height="wrap_content"
             android:background="#4e6ec6"
             app:srcCompat="@android:drawable/ic_menu_my_calendar"
-            android:onClick="onClickCalendar"/>
+            android:onClick="onClickCalendarDodaj"/>
 
 
     </LinearLayout>
