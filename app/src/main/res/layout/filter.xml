@@ -1,81 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <RadioGroup
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <RadioButton
-            android:id="@+id/radioButtonValue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Kwota"/>
-
-        <RadioButton
-            android:id="@+id/radioButtonDate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Data"/>
-
-    </RadioGroup>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Wybierz zakres"/>
+        android:text="Filtracja"
+        android:textStyle="bold"
+        android:textSize="30sp"
+        android:id="@+id/heading"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp" />
 
-    <LinearLayout
+    <RadioGroup
+        android:id="@+id/radioGroup"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_below="@id/heading"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/textViewFrom"
+
+        <RadioButton
+            android:id="@+id/radioButtonDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Od"/>
+            android:text="po dacie"
+            android:textSize="15sp"
+            android:checked="true" />
 
-        <ImageButton
+
+        <RadioButton
+            android:id="@+id/radioButtonValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="#4e6ec6"
-            android:src="@android:drawable/ic_menu_my_calendar"
-            android:onClick="onClickCalendar"
-            android:tag="from"/>
-    </LinearLayout>
+            android:text="po kwocie"
+            android:textSize="15sp" />
 
-        <EditText
-            android:id="@+id/editTextFrom"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="dd"/>
+    </RadioGroup>
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/zakres"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/radioGroup"
+        android:text="Wybierz zakres"
+        android:singleLine="true"
+        android:textSize="20sp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/textViewFrom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@id/zakres"
+        android:layout_below="@id/zakres"
+        android:singleLine="true"
+        android:text="Od"
+        android:textSize="20sp"
+        android:layout_marginEnd="20dp" />
+
+    <ImageButton
+        android:id="@+id/imageButtonFrom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@id/textViewFrom"
+        android:layout_below="@id/zakres"
+        android:background="#4e6ec6"
+        android:src="@android:drawable/ic_menu_my_calendar"
+        android:tag="from"
+        android:singleLine="true"
+        android:layout_marginEnd="20dp" />
+
+    <EditText
+        android:id="@+id/editTextFrom"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@id/textViewFrom"
+        android:layout_below="@id/textViewFrom"
+        android:textSize="15sp"
+        android:singleLine="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="5dp"/>
 
-        <TextView
-            android:id="@+id/textViewTo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Do"/>
+    <TextView
+        android:id="@+id/textViewTo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@id/editTextFrom"
+        android:layout_below="@id/editTextFrom"
+        android:singleLine="true"
+        android:text="Do"
+        android:textSize="20sp"
+        android:layout_marginEnd="20dp" />
 
-        <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="#4e6ec6"
-            android:src="@android:drawable/ic_menu_my_calendar"
-            android:onClick="onClickCalendar"
-            android:tag="to"/>
-    </LinearLayout>
+    <ImageButton
+        android:id="@+id/imageButtonTo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#4e6ec6"
+        android:src="@android:drawable/ic_menu_my_calendar"
+        android:tag="to"
+        android:layout_toEndOf="@id/textViewTo"
+        android:layout_below="@id/editTextFrom"
+        android:singleLine="true"
+        android:layout_marginEnd="20dp" />
 
     <EditText
         android:id="@+id/editTextTo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@id/textViewTo"
+        android:layout_below="@id/textViewTo"
+        android:textSize="15sp"
+        android:singleLine="true"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:layout_marginTop="5dp"/>
+
+
+    <TextView
+        android:id="@+id/action_ok"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="dd"/>
+        android:text="OK"
+        android:textStyle="bold"
+        android:layout_below="@id/editTextTo"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="20dp"
+        android:textSize="20sp"
+        android:textColor="@color/colorAccent"
+        android:layout_marginBottom="20dp"/>
 
-</LinearLayout>
+    <TextView
+        android:id="@+id/action_cancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CANCEL"
+        android:textStyle="bold"
+        android:layout_below="@id/editTextTo"
+        android:layout_alignParentLeft="true"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="20dp"
+        android:textSize="20sp"
+        android:textColor="@color/colorAccent" />
+
+</RelativeLayout>

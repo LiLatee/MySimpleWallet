@@ -470,104 +470,12 @@ public class MainActivity extends AppCompatActivity
     }
     EditText textViewFrom = null;
     EditText textViewTo = null;
+
+    dialog_example dialogE;
     public void onClickFilter(MenuItem item)
     {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        // Get the layout inflater
-        LayoutInflater inflater = this.getLayoutInflater();
-        View view = inflater.inflate(R.layout.filter, null);
-
-        // Inflate and set the layout for the dialog
-        // Pass null as the parent view because its going in the dialog layout
-        builder.setView(view)
-                // Add action buttons
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id)
-                    {
-                        Toast.makeText(getBaseContext(), "Hejka", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("ANULUJ", new DialogInterface.OnClickListener()
-                {
-                    public void onClick(DialogInterface dialog, int id) {
-                        Toast.makeText(getBaseContext(), "ANULUJ", Toast.LENGTH_SHORT).show();
-                    }
-                });
-        AlertDialog dialog = builder.create();
-        dialog.show();
-
-        Calendar calendar = Calendar.getInstance();
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
-        Date date = null;
-        try {date = calendar.getTime(); } catch (Exception e) {e.printStackTrace();}
-        String data = formatter.format(date);
-
-
-        textViewFrom = (EditText) view.findViewById(R.id.editTextFrom);
-        textViewFrom.setText(data);
-
-        textViewTo = (EditText) view.findViewById(R.id.editTextTo);
-        textViewTo.setText(data);
-    }
-
-    public void onClickCalendar(View view)
-    {
-        final View view2 = view;
-        DatePickerDialog.OnDateSetListener listener = new DatePickerDialog.OnDateSetListener()
-        {
-            @Override
-            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth)
-            {
-                String dayS = Integer.toString(dayOfMonth);
-                String monthS = Integer.toString(month + 1);
-
-                if (month + 1 < 10)
-                    monthS = "0" + monthS;
-                if (dayOfMonth < 10)
-                    dayS = "0" + dayS;
-
-
-
-                if (view2.getTag().toString().equals("from"))
-                {
-                    textViewFrom.setText((year) + "/" + monthS + "/" + dayS);
-                } else
-                {
-                    textViewTo.setText((year) + "/" + monthS + "/" + dayS);
-                }
-            }
-        };
-
-        Calendar calendar = Calendar.getInstance();
-
-        int day = calendar.get(Calendar.DAY_OF_MONTH);
-        int month = calendar.get(Calendar.MONTH);
-        int year = calendar.get(Calendar.YEAR);
-
-        DatePickerDialog datePickerDialog = new DatePickerDialog(this, 0, listener, year, month, day);
-        datePickerDialog.show();
-
-        String dayS = Integer.toString(datePickerDialog.getDatePicker().getDayOfMonth());
-        String monthS = Integer.toString(datePickerDialog.getDatePicker().getMonth() + 1);
-        year = datePickerDialog.getDatePicker().getYear();
-
-        if (month + 1 < 10)
-            monthS = "0" + monthS;
-        if (day < 10)
-            dayS = "0" + dayS;
-
-
-
-        /*if (view.getTag().toString().equals("from"))
-        {
-            EditText textViewFrom = (EditText) findViewById(R.id.editTextFrom);
-            textViewFrom.setText((year) + "/" + monthS + "/" + dayS);
-        } else
-        {
-            EditText textViewTo = (EditText) findViewById(R.id.editTextTo);
-            textViewTo.setText((year) + "/" + monthS + "/" + dayS);
-        }*/
+        dialog_example dialog = new dialog_example();
+        dialog.show(getSupportFragmentManager(), "MyCustomDialog");
     }
 
     @Override

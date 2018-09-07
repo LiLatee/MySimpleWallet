@@ -35,7 +35,7 @@ public class dodaj extends AppCompatActivity
 
     }
 
-    public void onClickCalendar(View view)
+    public void onClickCalendarDodaj(View view)
     {
         DatePickerDialog.OnDateSetListener listener = new DatePickerDialog.OnDateSetListener()
         {
