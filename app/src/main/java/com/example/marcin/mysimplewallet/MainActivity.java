@@ -6,15 +6,18 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -29,44 +32,13 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Creates database if not exists.
-        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                "Title VARCHAR," +
-                "Value DOUBLE NOT NULL, " +
-                "Date DATE," +
-                "IncomeOrOutgo INTEGER NOT NULL)";
-        db.execSQL(sqlDB);
-
-
-        // Loads data from database.
-        ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-        if (cursor.moveToFirst())
-        {
-            do
-            {
-                int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                String title = cursor.getString(cursor.getColumnIndex("Title"));
-                String value = cursor.getString(cursor.getColumnIndex("Value"));
-                String date = cursor.getString(cursor.getColumnIndex("Date"));
-                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-
-            } while (cursor.moveToNext());
-        }
-
-        for ( Registration x : registrations)
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+        loadData();
 
         // Loads account balance, income and outgo.
         SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
-        String stan = sharedPreferences.getString("stan","0");
-        String wydatki = sharedPreferences.getString("wydatki","0");
-        String przychod = sharedPreferences.getString("przychod","0");
+        String stan = sharedPreferences.getString("stan", "0");
+        String wydatki = sharedPreferences.getString("wydatki", "0");
+        String przychod = sharedPreferences.getString("przychod", "0");
 
         TextView textViewStan = (TextView) findViewById(R.id.textViewStanIlosc);
         textViewStan.setText(stan);
@@ -75,6 +47,7 @@ public class MainActivity extends AppCompatActivity
         TextView textViewPrzychod = (TextView) findViewById(R.id.textViewPrzychodIlosc);
         textViewPrzychod.setText(przychod);
     }
+
     @Override
     protected void onPause()
     {
@@ -96,6 +69,7 @@ public class MainActivity extends AppCompatActivity
 
     static final int REQUEST_CODE_WYDATEK = 0;
     static final int REQUEST_CODE_PRZYCHOD = 1;
+
     public void onClickWydatek(View view)
     {
         Intent i = new Intent(this, dodaj.class);
@@ -105,6 +79,7 @@ public class MainActivity extends AppCompatActivity
         startActivityForResult(i, REQUEST_CODE_WYDATEK);
 
     }
+
     public void onClickPrzychod(View view)
     {
         Intent i = new Intent(this, dodaj.class);
@@ -130,7 +105,7 @@ public class MainActivity extends AppCompatActivity
             if (Data.hasExtra("data"))
                 data = Data.getExtras().getString("data");
 
-            if(!kwota.isEmpty())
+            if (!kwota.isEmpty())
             {
 
                 addNewRow(tytul, kwota, data, 0);
@@ -147,8 +122,7 @@ public class MainActivity extends AppCompatActivity
                 wydatki.setText(Double.toString(wydatkiD));
 
             }
-        }
-        else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_PRZYCHOD)
+        } else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_PRZYCHOD)
         {
             if (Data.hasExtra("tytul"))
                 tytul = Data.getExtras().getString("tytul");
@@ -157,7 +131,7 @@ public class MainActivity extends AppCompatActivity
             if (Data.hasExtra("data"))
                 data = Data.getExtras().getString("data");
 
-            if(!kwota.isEmpty())
+            if (!kwota.isEmpty())
             {
 
                 addNewRow(tytul, kwota, data, 1);
@@ -170,11 +144,13 @@ public class MainActivity extends AppCompatActivity
 
                 TextView przychod = (TextView) findViewById(R.id.textViewPrzychodIlosc);
                 double przychodD = Double.parseDouble(przychod.getText().toString());
-                przychodD += Double.parseDouble(kwota);;
+                przychodD += Double.parseDouble(kwota);
+                ;
                 przychod.setText(Double.toString(przychodD));
             }
         }
     }
+
     // int wydatek_przychod
     // wydatek == 0
     // przychod == 1
@@ -197,15 +173,15 @@ public class MainActivity extends AppCompatActivity
         textViewKwota.setLayoutParams(size);
         textViewKwota.setMaxEms(2);
         textViewKwota.setText(kwota);
-        tableRow.addView(textViewKwota );
+        tableRow.addView(textViewKwota);
 
         TextView textViewData = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
         textViewData.setMaxEms(2);
 
         // Changes data show format from yyyy/mm/dd to dd/mm/yy
-        String a = data.substring(2,4);
-        String b = data.substring(8,10);
-        textViewData.setText(b + data.substring(4,8) + a);
+        String a = data.substring(2, 4);
+        String b = data.substring(8, 10);
+        textViewData.setText(b + data.substring(4, 8) + a);
         textViewData.setLayoutParams(size);
         tableRow.addView(textViewData);
 
@@ -215,11 +191,14 @@ public class MainActivity extends AppCompatActivity
         else
             tableRow.setBackgroundResource(R.color.przychod);
 
+        registerForContextMenu(tableRow);
+
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        tableLayout.addView(tableRow,1);
+        tableLayout.addView(tableRow, 1);
 
 
     }
+
     public void addHeaderRow()
     {
         TableRow.LayoutParams size = new TableRow.LayoutParams();
@@ -241,11 +220,12 @@ public class MainActivity extends AppCompatActivity
         tableRow.addView(textViewDate);
 
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        tableLayout.addView(tableRow,0);
+        tableLayout.addView(tableRow, 0);
     }
+
     public void addToDatabase(String title, String value, String date, int incomeOrOutgo)
     {
-        String sqlQuery =  null;
+        String sqlQuery = null;
         sqlQuery = "INSERT INTO IncomeOutgo(Title, Value, Date, IncomeOrOutgo) VALUES (" +
                 "\"" + title + "\"," +
                 "\"" + value + "\"," +
@@ -259,6 +239,7 @@ public class MainActivity extends AppCompatActivity
     int titleState = 0;
     int valueState = 0;
     int dateState = 0;
+
     public void onClickTitle(View view)
     {
 
@@ -267,8 +248,7 @@ public class MainActivity extends AppCompatActivity
         {
             titleState = 1;
             sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Title ASC";
-        }
-        else
+        } else
         {
             titleState = 0;
             sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Title DESC";
@@ -305,7 +285,8 @@ public class MainActivity extends AppCompatActivity
         // Clears all table's rows.
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         int count = tableLayout.getChildCount();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++)
+        {
             View child = tableLayout.getChildAt(i);
             if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
         }
@@ -314,6 +295,7 @@ public class MainActivity extends AppCompatActivity
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
+
     public void onClickValue(View view)
     {
         String sqlQuery = null;
@@ -321,8 +303,7 @@ public class MainActivity extends AppCompatActivity
         {
             valueState = 1;
             sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value ASC";
-        }
-        else
+        } else
         {
             valueState = 0;
             sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value DESC";
@@ -358,7 +339,8 @@ public class MainActivity extends AppCompatActivity
         // Clears all table's rows.
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         int count = tableLayout.getChildCount();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++)
+        {
             View child = tableLayout.getChildAt(i);
             if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
         }
@@ -367,6 +349,7 @@ public class MainActivity extends AppCompatActivity
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
+
     public void onClickDate(View view)
     {
         String sqlQuery = null;
@@ -374,8 +357,7 @@ public class MainActivity extends AppCompatActivity
         {
             dateState = 1;
             sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Date ASC";
-        }
-        else
+        } else
         {
             dateState = 0;
             sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Date DESC";
@@ -412,7 +394,8 @@ public class MainActivity extends AppCompatActivity
         // Clears all table's rows.
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         int count = tableLayout.getChildCount();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++)
+        {
             View child = tableLayout.getChildAt(i);
             if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
         }
@@ -429,9 +412,80 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.options_menu, menu);
         return true;
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
+    {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.context_menu, menu);
+    }
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        switch (item.getItemId()) {
+            case R.id.editRow:
+                Toast.makeText(this,"no i edycja", Toast.LENGTH_SHORT).show();
+                return true;
+            case R.id.deleteRow:
+                Toast.makeText(this,"no i nie ma", Toast.LENGTH_SHORT).show();
+                return true;
+            default:
+                return super.onContextItemSelected(item);
+        }
+    }
+
+
+    public void loadData()
+    {
+        // Creates database if not exists.
+        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                "Title VARCHAR," +
+                "Value DOUBLE NOT NULL, " +
+                "Date DATE," +
+                "IncomeOrOutgo INTEGER NOT NULL)";
+        db.execSQL(sqlDB);
+
+
+        // Loads data from database.
+        ArrayList<Registration> registrations = new ArrayList<Registration>();
+        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+
+        if (cursor.moveToFirst())
+        {
+            do
+            {
+                int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                String title = cursor.getString(cursor.getColumnIndex("Title"));
+                String value = cursor.getString(cursor.getColumnIndex("Value"));
+                String date = cursor.getString(cursor.getColumnIndex("Date"));
+                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+
+                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+
+            } while (cursor.moveToNext());
+        }
+
+
+        // Clears all table's rows.
+        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+        int count = tableLayout.getChildCount();
+        for (int i = 0; i < count; i++)
+        {
+            View child = tableLayout.getChildAt(i);
+            if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
+        }
+
+        addHeaderRow();
+        for (Registration x : registrations)
+            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
 }
