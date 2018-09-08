@@ -17,6 +17,8 @@ import java.util.Date;
 
 public class dodaj extends AppCompatActivity
 {
+    EditText editTextTitle, editTextValue, editTextDate;
+    String oldTitle, oldValue, oldDateS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -24,14 +26,30 @@ public class dodaj extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dodaj);
 
+        editTextTitle = (EditText) findViewById(R.id.editTextTytulDodaj);
+        editTextValue = (EditText) findViewById(R.id.editTextKwotaDodaj);
+        editTextDate = (EditText) findViewById(R.id.editTextDataDodaj);
+
+
         Calendar calendar = Calendar.getInstance();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
         Date date = null;
         try {date = calendar.getTime(); } catch (Exception e) {e.printStackTrace();}
         String data = formatter.format(date);
 
-        EditText textViewDate = (EditText) findViewById(R.id.editTextDataDodaj);
-        textViewDate.setText(data);
+        editTextDate.setText(data);
+
+        // Do it if edit mode.
+        if (getIntent().getExtras().getString("edit?").equals("true"))
+        {
+            oldTitle = getIntent().getExtras().getString("title");
+            oldValue = getIntent().getExtras().getString("value");
+            oldDateS = getIntent().getExtras().getString("date");
+
+            editTextTitle.setText(oldTitle);
+            editTextValue.setText(oldValue);
+            editTextDate.setText(oldDateS);
+        }
 
     }
 
@@ -72,33 +90,39 @@ public class dodaj extends AppCompatActivity
         if (day  < 10)
             dayS = "0" + dayS;
 
-
-        EditText textViewDate = (EditText) findViewById(R.id.editTextDataDodaj);
-        textViewDate.setText(year + "/" + monthS + "/" + dayS);
+        editTextDate.setText(year + "/" + monthS + "/" + dayS);
     }
 
     public void onClickDodaj(View view)
     {
-        EditText editTextTytul = (EditText) findViewById(R.id.editTextTytulDodaj);
-        EditText editTextKwota = (EditText) findViewById(R.id.editTextKwotaDodaj);
-        EditText editTextData = (EditText) findViewById(R.id.editTextDataDodaj);
 
-        if (editTextKwota.getText().toString().isEmpty() || Double.parseDouble(editTextKwota.getText().toString()) == 0.0)
+        if (editTextValue.getText().toString().isEmpty() || Double.parseDouble(editTextValue.getText().toString()) == 0.0)
         {
             Toast.makeText(this,"Kwota nie może być zerowa!", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (editTextTytul.getText().toString().isEmpty())
-            editTextTytul.setText("-");
-        if (editTextData.getText().toString().isEmpty())
-            editTextData.setText("-");
+        if (editTextTitle.getText().toString().isEmpty())
+            editTextTitle.setText("-");
+        if (editTextDate.getText().toString().isEmpty())
+            editTextDate.setText("-");
 
         int incomeOrOutgo = getIntent().getExtras().getInt("IncomeOrOutgo");
         Intent i = new Intent();
-        i.putExtra("tytul", editTextTytul.getText().toString());
-        if ( incomeOrOutgo == 0) i.putExtra( "kwota", "-" + editTextKwota.getText().toString());
-        else i.putExtra("kwota", editTextKwota.getText().toString());
-        i.putExtra("data", editTextData.getText().toString());
+
+        if (getIntent().getExtras().getString("edit?").equals("true"))
+        {
+            i.putExtra("edit?", "true");
+            i.putExtra("oldTitle", oldTitle);
+            i.putExtra("oldValue", oldValue);
+            i.putExtra("oldDate", oldDateS);
+        }
+        else
+            i.putExtra("edit?", "false");
+
+        i.putExtra("tytul", editTextTitle.getText().toString());
+        if ( incomeOrOutgo == 0) i.putExtra( "kwota", "-" + editTextValue.getText().toString());
+        else i.putExtra("kwota", editTextValue.getText().toString());
+        i.putExtra("data", editTextDate.getText().toString());
         setResult(RESULT_OK, i);
         finish();
     }

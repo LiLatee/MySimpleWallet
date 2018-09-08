@@ -4,8 +4,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -14,10 +16,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 
@@ -76,6 +81,7 @@ public class MainActivity extends AppCompatActivity
         // 0 - outgo
         // 1 - income
         i.putExtra("IncomeOrOutgo", 0);
+        i.putExtra("edit?", "false");
         startActivityForResult(i, REQUEST_CODE_WYDATEK);
 
     }
@@ -86,6 +92,7 @@ public class MainActivity extends AppCompatActivity
         // 0 - outgo
         // 1 - income
         i.putExtra("IncomeOrOutgo", 1);
+        i.putExtra("edit?", "false");
         startActivityForResult(i, REQUEST_CODE_PRZYCHOD);
 
     }
@@ -122,7 +129,8 @@ public class MainActivity extends AppCompatActivity
                 wydatki.setText(Double.toString(wydatkiD));
 
             }
-        } else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_PRZYCHOD)
+        }
+        else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_PRZYCHOD)
         {
             if (Data.hasExtra("tytul"))
                 tytul = Data.getExtras().getString("tytul");
@@ -148,6 +156,30 @@ public class MainActivity extends AppCompatActivity
                 ;
                 przychod.setText(Double.toString(przychodD));
             }
+
+        }
+        else if (resultCode == RESULT_OK)
+        {
+            String edit;
+            TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+            if (Data.hasExtra("edit?") || Data.getExtras().getString("edit?").equals("true"))
+            {
+                String oldTytul = Data.getExtras().getString("oldTitle");
+                String oldKwota = Data.getExtras().getString("oldValue");
+                String oldData = Data.getExtras().getString("oldDate");
+                tableLayout.removeView(tableRowToEditDelete);
+                String sqlQuery = " UPDATE IncomeOutgo SET" +
+                        " Title = " + tytul +
+                        ", Value = " + kwota +
+                        ", Date = '" + data + "'" +
+                        "WHERE Title = " + oldTytul +
+                        " AND Value = " + oldKwota +
+                        " AND Date = '" + oldData + "'";
+
+                db.execSQL(sqlQuery);
+
+                Toast.makeText(this, "Pozycja została zmieniona.", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -156,14 +188,14 @@ public class MainActivity extends AppCompatActivity
     // przychod == 1
     public void addNewRow(String tytul, String kwota, String data, int wydatek_przychod)
     {
-        TableRow tableRow = new TableRow(this);
-        TableRow.LayoutParams size = new TableRow.LayoutParams();
+        TableRowWithContextMenuInfo tableRow = new TableRowWithContextMenuInfo(this);
+        TableRowWithContextMenuInfo.LayoutParams size = new TableRowWithContextMenuInfo.LayoutParams();
         size.weight = 1;
-        TableRow.LayoutParams size2 = new TableRow.LayoutParams();
+        TableRowWithContextMenuInfo.LayoutParams size2 = new TableRowWithContextMenuInfo.LayoutParams();
         size2.weight = 2;
 
         TextView textViewTytul = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
-        textViewTytul.setWidth(TableRow.LayoutParams.MATCH_PARENT);
+        textViewTytul.setWidth(TableRowWithContextMenuInfo.LayoutParams.MATCH_PARENT);
         textViewTytul.setText(tytul);
         textViewTytul.setLayoutParams(size2);
         textViewTytul.setTextSize(20);
@@ -187,12 +219,17 @@ public class MainActivity extends AppCompatActivity
 
 
         if (wydatek_przychod == 0)
+        {
             tableRow.setBackgroundResource(R.color.wydatek);
+            tableRow.setTag("0");
+        }
         else
+        {
             tableRow.setBackgroundResource(R.color.przychod);
+            tableRow.setTag("1");
+        }
 
         registerForContextMenu(tableRow);
-
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         tableLayout.addView(tableRow, 1);
 
@@ -201,12 +238,12 @@ public class MainActivity extends AppCompatActivity
 
     public void addHeaderRow()
     {
-        TableRow.LayoutParams size = new TableRow.LayoutParams();
+        TableRowWithContextMenuInfo.LayoutParams size = new TableRowWithContextMenuInfo.LayoutParams();
         size.weight = 1;
-        TableRow.LayoutParams size2 = new TableRow.LayoutParams();
+        TableRowWithContextMenuInfo.LayoutParams size2 = new TableRowWithContextMenuInfo.LayoutParams();
         size2.weight = 2;
 
-        TableRow tableRow = new TableRow(this);
+        TableRowWithContextMenuInfo tableRow = new TableRowWithContextMenuInfo(this);
         TextView textViewTitle = (TextView) getLayoutInflater().inflate(R.layout.text_view_header_title, null);
         textViewTitle.setLayoutParams(size2);
         tableRow.addView(textViewTitle);
@@ -288,7 +325,7 @@ public class MainActivity extends AppCompatActivity
         for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
         }
 
         addHeaderRow();
@@ -342,7 +379,7 @@ public class MainActivity extends AppCompatActivity
         for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
         }
 
         addHeaderRow();
@@ -397,7 +434,7 @@ public class MainActivity extends AppCompatActivity
         for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
         }
 
         addHeaderRow();
@@ -426,66 +463,110 @@ public class MainActivity extends AppCompatActivity
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.context_menu, menu);
     }
+
+    TableRow tableRowToEditDelete;
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        TableRowWithContextMenuInfo.TableRowContextMenuInfo menuInfo = (TableRowWithContextMenuInfo.TableRowContextMenuInfo) item.getMenuInfo();
+        TableRowWithContextMenuInfo tableRow = (TableRowWithContextMenuInfo) menuInfo.targetView;
+
+        tableRowToEditDelete = tableRow;
+        TableLayout tableLayout = (TableLayout) tableRow.getParent();
+
+        TextView textViewTitle = (TextView) tableRow.getChildAt(0);
+        TextView textViewValue = (TextView) tableRow.getChildAt(1);
+        TextView textViewDate = (TextView) tableRow.getChildAt(2);
+
+        String title = textViewTitle.getText().toString();
+        String value = textViewValue.getText().toString();
+
+        String date = textViewDate.getText().toString();
+        String a = date.substring(0,2) ;
+        String b = date.substring(6,8) ;
+        date = "20" + b + date.substring(2,6) + a ; // from DD/MM/YY -> YYYY/MM/DD
+
+        String incomeOrOutgo = tableRow.getTag().toString();
+
         switch (item.getItemId()) {
             case R.id.editRow:
-                Toast.makeText(this,"no i edycja", Toast.LENGTH_SHORT).show();
+            {
+                Intent i = new Intent(this, dodaj.class);
+                // 0 - outgo
+                // 1 - income
+
+                if (Double.parseDouble(value) < 0)
+                    value = value.substring(1);
+                i.putExtra("edit?", "true");
+                i.putExtra("title", title);
+                i.putExtra("value", value);
+                i.putExtra("date", date);
+                i.putExtra("IncomeOrOutgo",  Integer.parseInt(incomeOrOutgo) );
+                startActivityForResult(i, Integer.parseInt(incomeOrOutgo));
+
                 return true;
+            }
             case R.id.deleteRow:
-                Toast.makeText(this,"no i nie ma", Toast.LENGTH_SHORT).show();
+            {
+                if (item instanceof TableRowWithContextMenuInfo) ((ViewGroup) item).removeAllViews();
+                String sqlQuery = "DELETE FROM IncomeOutgo " +
+                        "WHERE Title = " + title +
+                        " AND Value = " + value +
+                        " AND Date = '" + date + "'";
+                Log.d("pies", sqlQuery);
+                db.execSQL(sqlQuery);
+                tableLayout.removeView(tableRow);
+                Toast.makeText(this, "Pozycja została usunięta.", Toast.LENGTH_SHORT).show();
                 return true;
+            }
             default:
                 return super.onContextItemSelected(item);
         }
     }
 
-
-    public void loadData()
-    {
-        // Creates database if not exists.
-        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                "Title VARCHAR," +
-                "Value DOUBLE NOT NULL, " +
-                "Date DATE," +
-                "IncomeOrOutgo INTEGER NOT NULL)";
-        db.execSQL(sqlDB);
-
-
-        // Loads data from database.
-        ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-        if (cursor.moveToFirst())
+        public void loadData()
         {
-            do
+            // Creates database if not exists.
+            db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+            String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                    "Title VARCHAR," +
+                    "Value DOUBLE NOT NULL, " +
+                    "Date DATE," +
+                    "IncomeOrOutgo INTEGER NOT NULL)";
+            db.execSQL(sqlDB);
+
+
+            // Loads data from database.
+            ArrayList<Registration> registrations = new ArrayList<Registration>();
+            Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+
+            if (cursor.moveToFirst())
             {
-                int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                String title = cursor.getString(cursor.getColumnIndex("Title"));
-                String value = cursor.getString(cursor.getColumnIndex("Value"));
-                String date = cursor.getString(cursor.getColumnIndex("Date"));
-                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+                do
+                {
+                    int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                    String title = cursor.getString(cursor.getColumnIndex("Title"));
+                    String value = cursor.getString(cursor.getColumnIndex("Value"));
+                    String date = cursor.getString(cursor.getColumnIndex("Date"));
+                    int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
 
-                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
 
-            } while (cursor.moveToNext());
+                } while (cursor.moveToNext());
+            }
+
+
+            // Clears all table's rows.
+            TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+            int count = tableLayout.getChildCount();
+            for (int i = 0; i < count; i++)
+            {
+                View child = tableLayout.getChildAt(i);
+                if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
+            }
+
+            addHeaderRow();
+            for (Registration x : registrations)
+                addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
         }
-
-
-        // Clears all table's rows.
-        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        int count = tableLayout.getChildCount();
-        for (int i = 0; i < count; i++)
-        {
-            View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
-        }
-
-        addHeaderRow();
-        for (Registration x : registrations)
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
-}
