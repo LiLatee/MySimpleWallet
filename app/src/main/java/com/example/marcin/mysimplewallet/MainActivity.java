@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        addHeaderRow();
         loadData();
 
         // Loads account balance, income and outgo.
@@ -74,6 +75,7 @@ public class MainActivity extends AppCompatActivity
 
     static final int REQUEST_CODE_WYDATEK = 0;
     static final int REQUEST_CODE_PRZYCHOD = 1;
+    static final int REQUEST_CODE_EDIT = 2;
 
     public void onClickWydatek(View view)
     {
@@ -103,18 +105,18 @@ public class MainActivity extends AppCompatActivity
         String tytul = null;
         String kwota = null;
         String data = null;
-        if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_WYDATEK)
+
+        if (Data.hasExtra("tytul"))
+            tytul = Data.getExtras().getString("tytul");
+        if (Data.hasExtra("kwota"))
+            kwota = Data.getExtras().getString("kwota");
+        if (Data.hasExtra("data"))
+            data = Data.getExtras().getString("data");
+
+        if (resultCode == RESULT_OK)
         {
-            if (Data.hasExtra("tytul"))
-                tytul = Data.getExtras().getString("tytul");
-            if (Data.hasExtra("kwota"))
-                kwota = Data.getExtras().getString("kwota");
-            if (Data.hasExtra("data"))
-                data = Data.getExtras().getString("data");
-
-            if (!kwota.isEmpty())
+            if (requestCode == REQUEST_CODE_WYDATEK)
             {
-
                 addNewRow(tytul, kwota, data, 0);
                 addToDatabase(tytul, kwota, data, 0);
 
@@ -128,18 +130,8 @@ public class MainActivity extends AppCompatActivity
                 wydatkiD += Double.parseDouble(kwota.substring(1));
                 wydatki.setText(Double.toString(wydatkiD));
 
-            }
-        }
-        else if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_PRZYCHOD)
-        {
-            if (Data.hasExtra("tytul"))
-                tytul = Data.getExtras().getString("tytul");
-            if (Data.hasExtra("kwota"))
-                kwota = Data.getExtras().getString("kwota");
-            if (Data.hasExtra("data"))
-                data = Data.getExtras().getString("data");
 
-            if (!kwota.isEmpty())
+            } else if (requestCode == REQUEST_CODE_PRZYCHOD)
             {
 
                 addNewRow(tytul, kwota, data, 1);
@@ -153,32 +145,32 @@ public class MainActivity extends AppCompatActivity
                 TextView przychod = (TextView) findViewById(R.id.textViewPrzychodIlosc);
                 double przychodD = Double.parseDouble(przychod.getText().toString());
                 przychodD += Double.parseDouble(kwota);
-                ;
+
                 przychod.setText(Double.toString(przychodD));
+
+
             }
-
-        }
-        else if (resultCode == RESULT_OK)
-        {
-            String edit;
-            TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-            if (Data.hasExtra("edit?") || Data.getExtras().getString("edit?").equals("true"))
+            else if (requestCode == REQUEST_CODE_EDIT)
             {
-                String oldTytul = Data.getExtras().getString("oldTitle");
-                String oldKwota = Data.getExtras().getString("oldValue");
-                String oldData = Data.getExtras().getString("oldDate");
-                tableLayout.removeView(tableRowToEditDelete);
-                String sqlQuery = " UPDATE IncomeOutgo SET" +
-                        " Title = " + tytul +
-                        ", Value = " + kwota +
-                        ", Date = '" + data + "'" +
-                        "WHERE Title = " + oldTytul +
-                        " AND Value = " + oldKwota +
-                        " AND Date = '" + oldData + "'";
+                TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+                if (Data.hasExtra("edit?") || Data.getExtras().getString("edit?").equals("true"))
+                {
+                    String oldTytul = Data.getExtras().getString("oldTitle");
+                    String oldKwota = Data.getExtras().getString("oldValue");
+                    String oldData = Data.getExtras().getString("oldDate");
+                    tableLayout.removeView(tableRowToEditDelete);
+                    String sqlQuery = " UPDATE IncomeOutgo SET" +
+                            " Title = '" + tytul + "'" +
+                            ", Value = " + kwota +
+                            ", Date = '" + data + "'" +
+                            " WHERE Title = '" + oldTytul + "'" +
+                            " AND Value = " + oldKwota +
+                            " AND Date = '" + oldData + "'";
 
-                db.execSQL(sqlQuery);
-
-                Toast.makeText(this, "Pozycja została zmieniona.", Toast.LENGTH_SHORT).show();
+                    db.execSQL(sqlQuery);
+                    Log.d("pies", sqlQuery);
+                    Toast.makeText(this, "Pozycja została zmieniona.", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
@@ -222,8 +214,7 @@ public class MainActivity extends AppCompatActivity
         {
             tableRow.setBackgroundResource(R.color.wydatek);
             tableRow.setTag("0");
-        }
-        else
+        } else
         {
             tableRow.setBackgroundResource(R.color.przychod);
             tableRow.setTag("1");
@@ -260,6 +251,7 @@ public class MainActivity extends AppCompatActivity
         tableLayout.addView(tableRow, 0);
     }
 
+    //TODO: sprawdzić czy tu musza być cudzysłowa
     public void addToDatabase(String title, String value, String date, int incomeOrOutgo)
     {
         String sqlQuery = null;
@@ -465,8 +457,10 @@ public class MainActivity extends AppCompatActivity
     }
 
     TableRow tableRowToEditDelete;
+
     @Override
-    public boolean onContextItemSelected(MenuItem item) {
+    public boolean onContextItemSelected(MenuItem item)
+    {
         TableRowWithContextMenuInfo.TableRowContextMenuInfo menuInfo = (TableRowWithContextMenuInfo.TableRowContextMenuInfo) item.getMenuInfo();
         TableRowWithContextMenuInfo tableRow = (TableRowWithContextMenuInfo) menuInfo.targetView;
 
@@ -481,13 +475,14 @@ public class MainActivity extends AppCompatActivity
         String value = textViewValue.getText().toString();
 
         String date = textViewDate.getText().toString();
-        String a = date.substring(0,2) ;
-        String b = date.substring(6,8) ;
-        date = "20" + b + date.substring(2,6) + a ; // from DD/MM/YY -> YYYY/MM/DD
+        String a = date.substring(0, 2);
+        String b = date.substring(6, 8);
+        date = "20" + b + date.substring(2, 6) + a; // from DD/MM/YY -> YYYY/MM/DD
 
         String incomeOrOutgo = tableRow.getTag().toString();
 
-        switch (item.getItemId()) {
+        switch (item.getItemId())
+        {
             case R.id.editRow:
             {
                 Intent i = new Intent(this, dodaj.class);
@@ -500,16 +495,17 @@ public class MainActivity extends AppCompatActivity
                 i.putExtra("title", title);
                 i.putExtra("value", value);
                 i.putExtra("date", date);
-                i.putExtra("IncomeOrOutgo",  Integer.parseInt(incomeOrOutgo) );
-                startActivityForResult(i, Integer.parseInt(incomeOrOutgo));
+                i.putExtra("IncomeOrOutgo", Integer.parseInt(incomeOrOutgo));
+                startActivityForResult(i, REQUEST_CODE_EDIT);
 
                 return true;
             }
             case R.id.deleteRow:
             {
-                if (item instanceof TableRowWithContextMenuInfo) ((ViewGroup) item).removeAllViews();
+                if (item instanceof TableRowWithContextMenuInfo)
+                    ((ViewGroup) item).removeAllViews();
                 String sqlQuery = "DELETE FROM IncomeOutgo " +
-                        "WHERE Title = " + title +
+                        "WHERE Title = '" + title + "'" +
                         " AND Value = " + value +
                         " AND Date = '" + date + "'";
                 Log.d("pies", sqlQuery);
@@ -523,50 +519,49 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-        public void loadData()
+    public void loadData()
+    {
+        // Creates database if not exists.
+        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                "Title VARCHAR," +
+                "Value DOUBLE NOT NULL, " +
+                "Date DATE," +
+                "IncomeOrOutgo INTEGER NOT NULL)";
+        db.execSQL(sqlDB);
+
+
+        // Loads data from database.
+        ArrayList<Registration> registrations = new ArrayList<Registration>();
+        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+
+        if (cursor.moveToFirst())
         {
-            // Creates database if not exists.
-            db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-            String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                    "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                    "Title VARCHAR," +
-                    "Value DOUBLE NOT NULL, " +
-                    "Date DATE," +
-                    "IncomeOrOutgo INTEGER NOT NULL)";
-            db.execSQL(sqlDB);
-
-
-            // Loads data from database.
-            ArrayList<Registration> registrations = new ArrayList<Registration>();
-            Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-            if (cursor.moveToFirst())
+            do
             {
-                do
-                {
-                    int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                    String title = cursor.getString(cursor.getColumnIndex("Title"));
-                    String value = cursor.getString(cursor.getColumnIndex("Value"));
-                    String date = cursor.getString(cursor.getColumnIndex("Date"));
-                    int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+                int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                String title = cursor.getString(cursor.getColumnIndex("Title"));
+                String value = cursor.getString(cursor.getColumnIndex("Value"));
+                String date = cursor.getString(cursor.getColumnIndex("Date"));
+                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
 
-                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
 
-                } while (cursor.moveToNext());
-            }
-
-
-            // Clears all table's rows.
-            TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-            int count = tableLayout.getChildCount();
-            for (int i = 0; i < count; i++)
-            {
-                View child = tableLayout.getChildAt(i);
-                if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
-            }
-
-            addHeaderRow();
-            for (Registration x : registrations)
-                addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+            } while (cursor.moveToNext());
         }
+
+
+        // Clears all table's rows.
+        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+        int count = tableLayout.getChildCount();
+        for (int i = 1; i < count; i++)
+        {
+            View child = tableLayout.getChildAt(i);
+            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
+        }
+
+        for (Registration x : registrations)
+            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
+}

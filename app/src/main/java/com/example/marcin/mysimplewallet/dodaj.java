@@ -113,7 +113,10 @@ public class dodaj extends AppCompatActivity
         {
             i.putExtra("edit?", "true");
             i.putExtra("oldTitle", oldTitle);
-            i.putExtra("oldValue", oldValue);
+            if ( incomeOrOutgo == 0)
+                i.putExtra( "oldValue", "-" + oldValue);
+            else
+                i.putExtra("oldValue", oldValue);
             i.putExtra("oldDate", oldDateS);
         }
         else
