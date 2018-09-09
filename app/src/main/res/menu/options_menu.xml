@@ -8,5 +8,9 @@
         android:onClick="onClickFilter"
         app:showAsAction="always"
         android:icon="@drawable/filter"/>
+    <item android:id="@+id/clearAll"
+        android:title="Wyczyść dane"
+        android:onClick="onClickClearAll"
+        app:showAsAction="never" />
 
 </menu>

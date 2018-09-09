@@ -1,10 +1,13 @@
 package com.example.marcin.mysimplewallet;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+import android.support.annotation.Nullable;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,6 +15,7 @@ import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -30,7 +34,7 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity
 {
     private SQLiteDatabase db;
-
+    private TextView textViewBalance, textViewIncome, textViewOutgo;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -46,12 +50,12 @@ public class MainActivity extends AppCompatActivity
         String wydatki = sharedPreferences.getString("wydatki", "0");
         String przychod = sharedPreferences.getString("przychod", "0");
 
-        TextView textViewStan = (TextView) findViewById(R.id.textViewStanIlosc);
-        textViewStan.setText(stan);
-        TextView textViewWydatki = (TextView) findViewById(R.id.textViewWydatkiIlosc);
-        textViewWydatki.setText(wydatki);
-        TextView textViewPrzychod = (TextView) findViewById(R.id.textViewPrzychodIlosc);
-        textViewPrzychod.setText(przychod);
+        textViewBalance = (TextView) findViewById(R.id.textViewStanIlosc);
+        textViewBalance.setText(stan);
+        textViewOutgo = (TextView) findViewById(R.id.textViewWydatkiIlosc);
+        textViewOutgo.setText(wydatki);
+        textViewIncome = (TextView) findViewById(R.id.textViewPrzychodIlosc);
+        textViewIncome.setText(przychod);
     }
 
     @Override
@@ -61,12 +65,12 @@ public class MainActivity extends AppCompatActivity
         SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
         SharedPreferences.Editor prefsEditor = sharedPreferences.edit();
 
-        TextView textViewStan = (TextView) findViewById(R.id.textViewStanIlosc);
-        prefsEditor.putString("stan", textViewStan.getText().toString());
-        TextView textViewWydatki = (TextView) findViewById(R.id.textViewWydatkiIlosc);
-        prefsEditor.putString("wydatki", textViewWydatki.getText().toString());
-        TextView textViewPrzychod = (TextView) findViewById(R.id.textViewPrzychodIlosc);
-        prefsEditor.putString("przychod", textViewPrzychod.getText().toString());
+        textViewBalance = (TextView) findViewById(R.id.textViewStanIlosc);
+        prefsEditor.putString("stan", textViewBalance.getText().toString());
+        textViewOutgo = (TextView) findViewById(R.id.textViewWydatkiIlosc);
+        prefsEditor.putString("wydatki", textViewOutgo.getText().toString());
+        textViewIncome = (TextView) findViewById(R.id.textViewPrzychodIlosc);
+        prefsEditor.putString("przychod", textViewIncome.getText().toString());
 
         prefsEditor.commit();
 
@@ -105,16 +109,20 @@ public class MainActivity extends AppCompatActivity
         String tytul = null;
         String kwota = null;
         String data = null;
-
-        if (Data.hasExtra("tytul"))
-            tytul = Data.getExtras().getString("tytul");
-        if (Data.hasExtra("kwota"))
-            kwota = Data.getExtras().getString("kwota");
-        if (Data.hasExtra("data"))
-            data = Data.getExtras().getString("data");
+        int incomeOrOutgo = 0;
 
         if (resultCode == RESULT_OK)
         {
+
+            if (Data.hasExtra("tytul"))
+                tytul = Data.getExtras().getString("tytul");
+            if (Data.hasExtra("kwota"))
+                kwota = Data.getExtras().getString("kwota");
+            if (Data.hasExtra("data"))
+                data = Data.getExtras().getString("data");
+            if (Data.hasExtra("incomeOrOutgo"))
+                incomeOrOutgo = Data.getExtras().getInt("incomeOrOutgo");
+
             if (requestCode == REQUEST_CODE_WYDATEK)
             {
                 addNewRow(tytul, kwota, data, 0);
@@ -168,7 +176,27 @@ public class MainActivity extends AppCompatActivity
                             " AND Date = '" + oldData + "'";
 
                     db.execSQL(sqlQuery);
-                    Log.d("pies", sqlQuery);
+
+                    // Updates main information.
+                    Double oldBalance = Double.parseDouble(textViewBalance.getText().toString());
+                    Double oldIncome = Double.parseDouble(textViewIncome.getText().toString());
+                    Double oldOutgo = Double.parseDouble(textViewOutgo.getText().toString());
+
+                    Double newBalance = oldBalance - Double.parseDouble(oldKwota) + Double.parseDouble(kwota);
+                    textViewBalance.setText(Double.toString(newBalance));
+                    Double newIncome, newOutgo;
+
+                    if (incomeOrOutgo == 1)
+                    {
+                        newIncome = oldIncome - Double.parseDouble(oldKwota) + Double.parseDouble(kwota);
+                        textViewIncome.setText(Double.toString(newIncome));
+                    }
+                    else
+                    {
+                        newOutgo = oldOutgo + Double.parseDouble(oldKwota) - Double.parseDouble(kwota);
+                        textViewOutgo.setText(Double.toString(newOutgo));
+                    }
+                    loadData();
                     Toast.makeText(this, "Pozycja została zmieniona.", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -180,6 +208,23 @@ public class MainActivity extends AppCompatActivity
     // przychod == 1
     public void addNewRow(String tytul, String kwota, String data, int wydatek_przychod)
     {
+        final String titleF = tytul;
+        final String valueF = kwota;
+        final String dateF = data;
+        View.OnClickListener onClickListener = new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                Intent i = new Intent(getBaseContext(), preview.class);
+                i.putExtra("title", titleF);
+                i.putExtra("value", valueF);
+                i.putExtra("date", dateF);
+                startActivity(i);
+            }
+
+        };
+
         TableRowWithContextMenuInfo tableRow = new TableRowWithContextMenuInfo(this);
         TableRowWithContextMenuInfo.LayoutParams size = new TableRowWithContextMenuInfo.LayoutParams();
         size.weight = 1;
@@ -221,6 +266,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         registerForContextMenu(tableRow);
+        tableRow.setOnClickListener(onClickListener);
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         tableLayout.addView(tableRow, 1);
 
@@ -268,7 +314,6 @@ public class MainActivity extends AppCompatActivity
     int titleState = 0;
     int valueState = 0;
     int dateState = 0;
-
     public void onClickTitle(View view)
     {
 
@@ -440,6 +485,43 @@ public class MainActivity extends AppCompatActivity
         dialog.show(getSupportFragmentManager(), "filterDialog");
     }
 
+    public void onClickClearAll(MenuItem item)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+        builder.setTitle("Czy chcesz usunąć wszystkie dane?");
+        builder.setPositiveButton("TAK", new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                deleteDatabase("Wallet");
+                SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
+                SharedPreferences.Editor prefsEditor = sharedPreferences.edit();
+                prefsEditor.clear();
+                prefsEditor.apply();
+                textViewBalance.setText("0");
+                textViewIncome.setText("0");
+                textViewOutgo.setText("0");
+                loadData();
+
+                Toast.makeText(getBaseContext(), "Dane zostały usunięte.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton("NIE", new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                Toast.makeText(getBaseContext(), "Anulowano.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
@@ -457,7 +539,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     TableRow tableRowToEditDelete;
-
     @Override
     public boolean onContextItemSelected(MenuItem item)
     {

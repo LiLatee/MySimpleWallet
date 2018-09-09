@@ -1,5 +1,6 @@
 package com.example.marcin.mysimplewallet;
 
+
 public class Registration
 {
     int id;
@@ -18,5 +19,6 @@ public class Registration
         this.date = date;
         this.incomeOrOutgo = incomeOrOutgo;
     }
+
 
 }

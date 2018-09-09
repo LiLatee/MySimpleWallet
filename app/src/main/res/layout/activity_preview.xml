@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".dodaj">
+
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:text="Tytuł"
+        android:textColor="#4e6ec6"
+        android:textSize="30sp" />
+
+    <TextView
+        android:id="@+id/textViewTytulDodaj"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:text="Kwota"
+        android:textColor="#4e6ec6"
+        android:textSize="30sp" />
+
+
+    <TextView
+        android:id="@+id/textViewKwotaDodaj"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:textSize="20sp" />
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="15dp"
+        android:gravity="start"
+        android:text="Data"
+        android:textColor="#4e6ec6"
+        android:textSize="30sp" />
+
+
+    <TextView
+        android:id="@+id/textViewDataDodaj"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="DD.MM.YYYY" />
+
+
+
+    <Button
+        android:id="@+id/buttonBack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Wróć"
+        android:onClick="onClickBack"/>
+
+</LinearLayout>

@@ -126,6 +126,7 @@ public class dodaj extends AppCompatActivity
         if ( incomeOrOutgo == 0) i.putExtra( "kwota", "-" + editTextValue.getText().toString());
         else i.putExtra("kwota", editTextValue.getText().toString());
         i.putExtra("data", editTextDate.getText().toString());
+        i.putExtra("incomeOrOutgo", incomeOrOutgo);
         setResult(RESULT_OK, i);
         finish();
     }
