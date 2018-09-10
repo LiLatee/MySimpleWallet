@@ -5,14 +5,18 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.view.menu.ActionMenuItemView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -51,6 +55,10 @@ public class filter_dialog extends DialogFragment
         radioGroup = (RadioGroup) dialogView.findViewById(R.id.radioGroup);
         setDefaultDate();
 
+        ediTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
+        editTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
+
+
 
         imageButtonFrom = (ImageButton) dialogView.findViewById(R.id.imageButtonFrom);
         imageButtonTo = (ImageButton) dialogView.findViewById(R.id.imageButtonTo);
@@ -88,17 +96,25 @@ public class filter_dialog extends DialogFragment
                     setDefaultDate();
                     imageButtonFrom.setVisibility(View.VISIBLE);
                     imageButtonTo.setVisibility(View.VISIBLE);
-                } else
+                }
+                else if (selectedButton.getTag().equals("byValue"))
                 {
-                    EditText ediTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
                     ediTextFrom.setText(null);
-
-                    EditText ediTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
-                    ediTextTo.setText(null);
+                    editTextTo.setText(null);
 
                     imageButtonFrom.setVisibility(View.GONE);
                     imageButtonTo.setVisibility(View.GONE);
                 }
+                else if (selectedButton.getTag().equals("byTitle"))
+                {
+                    ediTextFrom.setText(null);
+                    editTextTo.setText(null);
+                    editTextTo.setVisibility(View.GONE);
+
+                    imageButtonFrom.setVisibility(View.GONE);
+                    imageButtonTo.setVisibility(View.GONE);
+                }
+
             }
         });
 
@@ -110,18 +126,7 @@ public class filter_dialog extends DialogFragment
             @Override
             public void onClick(View v)
             {
-                // Creates database if not exists.
-                db = getActivity().openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
 
-                String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                        "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                        "Title VARCHAR," +
-                        "Value DOUBLE NOT NULL, " +
-                        "Date DATE," +
-                        "IncomeOrOutgo INTEGER NOT NULL)";
-                db.execSQL(sqlDB);
-
-                //
                 RadioButton selectedButton = (RadioButton) dialogView.findViewById(radioGroup.getCheckedRadioButtonId());
                 String sqlQuery = null;
                 String value1 = ediTextFrom.getText().toString();
@@ -149,7 +154,7 @@ public class filter_dialog extends DialogFragment
 
                     sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE Date BETWEEN '" + value1 + "' AND '" + value2 + "'";
                 }
-                else
+                else if (selectedButton.getTag().equals("byValue"))
                 {
 
                     String regex = "^(0|([1-9][0-9]*))(\\.[0-9]+)?$";
@@ -165,38 +170,14 @@ public class filter_dialog extends DialogFragment
                     }
                     sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE " + "ABS(Value) BETWEEN " + value1 + " AND " + value2;
                 }
-
-
-                ArrayList<Registration> registrations = new ArrayList<Registration>();
-                Cursor cursor = db.rawQuery(sqlQuery, null);
-
-                if (cursor.moveToFirst())
+                else if (selectedButton.getTag().equals("byTitle"))
                 {
-                    do
-                    {
-                        int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                        String title = cursor.getString(cursor.getColumnIndex("Title"));
-                        String value = cursor.getString(cursor.getColumnIndex("Value"));
-                        String date = cursor.getString(cursor.getColumnIndex("Date"));
-                        int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-                        registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-
-                    } while (cursor.moveToNext());
+                    Toast.makeText(getContext(), value1, Toast.LENGTH_SHORT).show();
+                    getDialog().dismiss();
                 }
 
-                // Clears all table's rows.
-                TableLayout tableLayout = (TableLayout) ((MainActivity)getActivity()).findViewById(R.id.tableLayout);
-                int count = tableLayout.getChildCount();
-                for (int i = 0; i < count; i++) {
-                    View child = tableLayout.getChildAt(i);
-                    if (child instanceof TableRow) ((ViewGroup) child).removeAllViews();
-                }
-
-                ((MainActivity)getActivity()).addHeaderRow();
-
-                for ( Registration x : registrations)
-                    ((MainActivity)getActivity()).addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                ((MainActivity)getActivity()).sendQueryAndShow(sqlQuery);
+                ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter));
 
                 getDialog().dismiss();
             }
@@ -216,7 +197,9 @@ public class filter_dialog extends DialogFragment
             @Override
             public void onClick(View v)
             {
-                ((MainActivity)getActivity()).loadData();
+                ((MainActivity)getActivity()).sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
+                ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter_outline));
                 getDialog().dismiss();
             }
         });

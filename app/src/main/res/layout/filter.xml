@@ -5,16 +5,16 @@
 
 
     <TextView
+        android:id="@+id/heading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Filtracja"
-        android:textStyle="bold"
-        android:textSize="30sp"
-        android:id="@+id/heading"
+        android:layout_marginBottom="20dp"
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp" />
+        android:text="Filtracja"
+        android:textSize="30sp"
+        android:textStyle="bold" />
 
     <RadioGroup
         android:id="@+id/radioGroup"
@@ -30,19 +30,19 @@
             android:id="@+id/radioButtonDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="po dacie"
-            android:textSize="15sp"
             android:checked="true"
-            android:tag="byDate" />
+            android:tag="byDate"
+            android:text="po dacie"
+            android:textSize="15sp" />
 
 
         <RadioButton
             android:id="@+id/radioButtonValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:tag="byValue"
             android:text="po kwocie"
-            android:textSize="15sp"
-            android:tag="byValue"/>
+            android:textSize="15sp" />
 
     </RadioGroup>
 
@@ -51,12 +51,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/radioGroup"
-        android:text="Wybierz zakres"
-        android:singleLine="true"
-        android:textSize="20sp"
+        android:layout_marginBottom="20dp"
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
-        android:layout_marginBottom="20dp"/>
+        android:singleLine="true"
+        android:text="Wybierz zakres"
+        android:textSize="20sp" />
 
     <TextView
         android:id="@+id/textViewFrom"
@@ -64,22 +64,22 @@
         android:layout_height="wrap_content"
         android:layout_alignStart="@id/zakres"
         android:layout_below="@id/zakres"
+        android:layout_marginEnd="20dp"
         android:singleLine="true"
         android:text="Od"
-        android:textSize="20sp"
-        android:layout_marginEnd="20dp" />
+        android:textSize="20sp" />
 
     <ImageButton
         android:id="@+id/imageButtonFrom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toEndOf="@id/textViewFrom"
         android:layout_below="@id/zakres"
+        android:layout_marginEnd="20dp"
+        android:layout_toEndOf="@id/textViewFrom"
         android:background="#4e6ec6"
-        android:src="@android:drawable/ic_menu_my_calendar"
-        android:tag="from"
         android:singleLine="true"
-        android:layout_marginEnd="20dp" />
+        android:src="@android:drawable/ic_menu_my_calendar"
+        android:tag="from" />
 
     <EditText
         android:id="@+id/editTextFrom"
@@ -87,10 +87,10 @@
         android:layout_height="wrap_content"
         android:layout_alignStart="@id/textViewFrom"
         android:layout_below="@id/textViewFrom"
-        android:textSize="15sp"
-        android:singleLine="true"
         android:layout_marginEnd="20dp"
-        android:layout_marginTop="5dp"/>
+        android:layout_marginTop="5dp"
+        android:singleLine="true"
+        android:textSize="15sp" />
 
     <TextView
         android:id="@+id/textViewTo"
@@ -98,22 +98,22 @@
         android:layout_height="wrap_content"
         android:layout_alignStart="@id/editTextFrom"
         android:layout_below="@id/editTextFrom"
+        android:layout_marginEnd="20dp"
         android:singleLine="true"
         android:text="Do"
-        android:textSize="20sp"
-        android:layout_marginEnd="20dp" />
+        android:textSize="20sp" />
 
     <ImageButton
         android:id="@+id/imageButtonTo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="#4e6ec6"
-        android:src="@android:drawable/ic_menu_my_calendar"
-        android:tag="to"
-        android:layout_toEndOf="@id/textViewTo"
         android:layout_below="@id/editTextFrom"
+        android:layout_marginEnd="20dp"
+        android:layout_toEndOf="@id/textViewTo"
+        android:background="#4e6ec6"
         android:singleLine="true"
-        android:layout_marginEnd="20dp" />
+        android:src="@android:drawable/ic_menu_my_calendar"
+        android:tag="to" />
 
     <EditText
         android:id="@+id/editTextTo"
@@ -121,11 +121,11 @@
         android:layout_height="wrap_content"
         android:layout_alignStart="@id/textViewTo"
         android:layout_below="@id/textViewTo"
-        android:textSize="15sp"
-        android:singleLine="true"
-        android:layout_marginEnd="20dp"
         android:layout_marginBottom="20dp"
-        android:layout_marginTop="5dp"/>
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="5dp"
+        android:singleLine="true"
+        android:textSize="15sp" />
 
 
     <LinearLayout
@@ -138,40 +138,40 @@
             android:id="@+id/textViewOk"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="OK"
-            android:textStyle="bold"
-            android:layout_marginStart="20dp"
-            android:textSize="20sp"
-            android:textColor="@color/colorAccent"
             android:layout_marginBottom="20dp"
-            android:background="?attr/selectableItemBackground"
+            android:layout_marginStart="20dp"
             android:layout_weight="1"
-            android:translationY="10sp"/>
+            android:background="?attr/selectableItemBackground"
+            android:text="OK"
+            android:textColor="@color/colorAccent"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:translationY="10sp" />
 
         <TextView
             android:id="@+id/textViewRemoveFilter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="USUŃ FILTR"
-            android:textStyle="bold"
-            android:textSize="20sp"
-            android:textColor="@color/colorAccent"
             android:layout_marginBottom="20dp"
-            android:background="?attr/selectableItemBackground"
             android:layout_weight="1"
-            android:lines="2"/>
+            android:background="?attr/selectableItemBackground"
+            android:lines="2"
+            android:text="USUŃ FILTR"
+            android:textColor="@color/colorAccent"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/textViewCancel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ANULUJ"
-            android:textStyle="bold"
             android:layout_marginBottom="20dp"
-            android:textSize="20sp"
-            android:textColor="@color/colorAccent"
-            android:background="?attr/selectableItemBackground"
             android:layout_weight="1"
+            android:background="?attr/selectableItemBackground"
+            android:text="ANULUJ"
+            android:textColor="@color/colorAccent"
+            android:textSize="20sp"
+            android:textStyle="bold"
             android:translationY="10sp" />
 
     </LinearLayout>

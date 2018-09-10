@@ -3,14 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
+    <item
+        android:id="@+id/menu_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="Szukaj"
+        android:hint="Wyszukaj tytuł..."
+        app:actionViewClass="android.support.v7.widget.SearchView"
+        app:showAsAction="collapseActionView|ifRoom" />
+
     <item android:id="@+id/filter"
         android:title="Filtracja"
         android:onClick="onClickFilter"
         app:showAsAction="always"
-        android:icon="@drawable/filter"/>
+        android:icon="@drawable/filter_outline"/>
+
     <item android:id="@+id/clearAll"
         android:title="Wyczyść dane"
         android:onClick="onClickClearAll"
         app:showAsAction="never" />
+
 
 </menu>

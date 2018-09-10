@@ -1,5 +1,7 @@
 package com.example.marcin.mysimplewallet;
 
+import android.app.SearchManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,6 +12,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -41,40 +44,14 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        textViewBalance = (TextView) findViewById(R.id.textViewStanIlosc);
+        textViewOutgo = (TextView) findViewById(R.id.textViewWydatkiIlosc);
+        textViewIncome = (TextView) findViewById(R.id.textViewPrzychodIlosc);
+
+
         addHeaderRow();
-        loadData();
+        sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
-        // Loads account balance, income and outgo.
-        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
-        String stan = sharedPreferences.getString("stan", "0");
-        String wydatki = sharedPreferences.getString("wydatki", "0");
-        String przychod = sharedPreferences.getString("przychod", "0");
-
-        textViewBalance = (TextView) findViewById(R.id.textViewStanIlosc);
-        textViewBalance.setText(stan);
-        textViewOutgo = (TextView) findViewById(R.id.textViewWydatkiIlosc);
-        textViewOutgo.setText(wydatki);
-        textViewIncome = (TextView) findViewById(R.id.textViewPrzychodIlosc);
-        textViewIncome.setText(przychod);
-    }
-
-    @Override
-    protected void onPause()
-    {
-        // Saves account balance, income and outgo.
-        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
-        SharedPreferences.Editor prefsEditor = sharedPreferences.edit();
-
-        textViewBalance = (TextView) findViewById(R.id.textViewStanIlosc);
-        prefsEditor.putString("stan", textViewBalance.getText().toString());
-        textViewOutgo = (TextView) findViewById(R.id.textViewWydatkiIlosc);
-        prefsEditor.putString("wydatki", textViewOutgo.getText().toString());
-        textViewIncome = (TextView) findViewById(R.id.textViewPrzychodIlosc);
-        prefsEditor.putString("przychod", textViewIncome.getText().toString());
-
-        prefsEditor.commit();
-
-        super.onPause();
     }
 
     static final int REQUEST_CODE_WYDATEK = 0;
@@ -196,7 +173,7 @@ public class MainActivity extends AppCompatActivity
                         newOutgo = oldOutgo + Double.parseDouble(oldKwota) - Double.parseDouble(kwota);
                         textViewOutgo.setText(Double.toString(newOutgo));
                     }
-                    loadData();
+                    sendQueryAndShow("SELECT * FROM IncomeOutgo");
                     Toast.makeText(this, "Pozycja została zmieniona.", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -503,7 +480,7 @@ public class MainActivity extends AppCompatActivity
                 textViewBalance.setText("0");
                 textViewIncome.setText("0");
                 textViewOutgo.setText("0");
-                loadData();
+                sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
                 Toast.makeText(getBaseContext(), "Dane zostały usunięte.", Toast.LENGTH_SHORT).show();
             }
@@ -522,13 +499,43 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    public Menu menu;
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
+        this.menu = menu;
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.options_menu, menu);
+
+        // Get the SearchView and set the searchable configuration
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        final SearchView searchView = (SearchView) menu.findItem(R.id.menu_search).getActionView();
+        // Assumes current activity is the searchable activity
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
+        searchView.setQueryHint("Wyszukaj tytułu...");
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener(){
+            @Override
+            public boolean onQueryTextSubmit(String s)
+            {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s)
+            {
+
+                String sqlQuery = "SELECT * FROM IncomeOutgo WHERE Title LIKE '%" + s + "%'";
+                sendQueryAndShow(sqlQuery);
+                
+                return false;
+            }
+        });
+
+
         return true;
     }
+
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
@@ -600,8 +607,10 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public void loadData()
+    
+    public void sendQueryAndShow(String sqlQuery)
     {
+
         // Creates database if not exists.
         db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
         String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
@@ -615,7 +624,7 @@ public class MainActivity extends AppCompatActivity
 
         // Loads data from database.
         ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+        Cursor cursor = db.rawQuery(sqlQuery, null);
 
         if (cursor.moveToFirst())
         {
@@ -642,7 +651,25 @@ public class MainActivity extends AppCompatActivity
             if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
         }
 
+        Double balance = 0.0, income = 0.0, outgo = 0.0;
+
+        // Sets main information and proper rows.
         for (Registration x : registrations)
+        {
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+            if (x.incomeOrOutgo == 0)
+                outgo -= Double.parseDouble(x.value);
+            else
+                income += Double.parseDouble(x.value);
+
+            balance += Double.parseDouble(x.value);
+
+        }
+        textViewBalance.setText(Double.toString(balance));
+        textViewIncome.setText(Double.toString(income));
+        textViewOutgo.setText(Double.toString(outgo));
+
+
     }
+    
 }
