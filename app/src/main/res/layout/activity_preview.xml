@@ -5,19 +5,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".dodaj">
+    tools:context=".add">
 
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="start"
-        android:text="Tytuł"
+        android:text="@string/title"
         android:textColor="#4e6ec6"
         android:textSize="30sp" />
 
     <TextView
-        android:id="@+id/textViewTytulDodaj"
+        android:id="@+id/textViewTitleAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="20sp" />
@@ -26,13 +26,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="start"
-        android:text="Kwota"
+        android:text="@string/value"
         android:textColor="#4e6ec6"
         android:textSize="30sp" />
 
 
     <TextView
-        android:id="@+id/textViewKwotaDodaj"
+        android:id="@+id/textViewValueAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="numberDecimal"
@@ -44,13 +44,13 @@
         android:layout_height="wrap_content"
         android:layout_marginRight="15dp"
         android:gravity="start"
-        android:text="Data"
+        android:text="@string/date"
         android:textColor="#4e6ec6"
         android:textSize="30sp" />
 
 
     <TextView
-        android:id="@+id/textViewDataDodaj"
+        android:id="@+id/textViewDateAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="DD.MM.YYYY"
@@ -62,7 +62,7 @@
         android:id="@+id/buttonBack"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Wróć"
+        android:text="@string/back"
         android:onClick="onClickBack" />
 
 </LinearLayout>

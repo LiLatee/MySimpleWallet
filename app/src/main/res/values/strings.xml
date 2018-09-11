@@ -1,3 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MySimpleWallet</string>
+    <string name="app_name" translatable="false">MySimpleWallet</string>
+    <string name="info_registration_changed">Registration has been changed.</string>
+    <string name="yes">YES</string>
+    <string name="no">NO</string>
+    <string name="info_clear_all">Data has beed deleted.</string>
+    <string name="info_canceled">Canceled.</string>
+    <string name="search_title">Search a title...</string>
+    <string name="info_registration_deleted">Registration has been deleted.</string>
+    <string name="information">Information</string>
+    <string name="info_about_saving_1">The backup file has been saved under the path\\n\\n</string>
+    <string name="info_about_saving_2">\\n\\nIn order to restore the backup later, copy the above-mentioned file and save it in a safe place. Then, after the new installation of the application, place the file in the same location and trigger the backup from the option.</string>
+    <string name="info_about_restoring_1">Restore file has not been found under this path\\n\\n</string>
+    <string name="info_about_restoring_2">\\n\\nIn order to restoring backup please place backup file in the mentioned path, then retrigger load data from backup file in options.</string>
+    <string name="warning">Warning!</string>
+    <string name="info_clear_all_question">The action will delete all data. Continue?</string>
+    <string name="info_data_loaded">Data has been loaded.</string>
+    <string name="info_empty_value">Value can not be empty.</string>
+    <string name="info_date_format_error">Date has to be in YYYY/MM/DD format or incorrect data.</string>
+    <string name="info_date_order_error">The first date has to be lower than the second.</string>
+    <string name="info_value_available_characters">Available character are (0-9) and a dot (.).</string>
+    <string name="info_value_order_error">The first value has to be less than the second.</string>
+    <string name="title">Title</string>
+    <string name="value">Value</string>
+    <string name="date">Date</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="outgo">Outgo</string>
+    <string name="income">Income</string>
+    <string name="balance">Balance</string>
+    <string name="add_outgo">Add outgo</string>
+    <string name="add_income">Add income</string>
+    <string name="back">Back</string>
+    <string name="filtration">Filtration</string>
+    <string name="by_date">by date</string>
+    <string name="by_value">by value</string>
+    <string name="choose_range">Choose range</string>
+    <string name="from">From</string>
+    <string name="to">To</string>
+    <string name="remove_filter">REMOVE FILTER</string>
+    <string name="CANCEL">CANCEL</string>
+    <string name="delete">Remove</string>
+    <string name="edit">Edit</string>
+    <string name="search">Search</string>
+    <string name="clear_data">Clear data</string>
+    <string name="load_backup">Load backup file</string>
+    <string name="save_backup">Save backup file</string>
+    <string name="change_language">Change language</string>
+    <string name="select_language">Select language</string>
 </resources>

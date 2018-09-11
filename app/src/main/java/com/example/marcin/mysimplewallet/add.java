@@ -1,8 +1,10 @@
 package com.example.marcin.mysimplewallet;
 
 import android.app.DatePickerDialog;
+import android.content.Context;
 import android.content.Intent;
-import android.os.strictmode.CleartextNetworkViolation;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,7 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-public class dodaj extends AppCompatActivity
+public class add extends AppCompatActivity
 {
     EditText editTextTitle, editTextValue, editTextDate;
     String oldTitle, oldValue, oldDateS;
@@ -24,11 +26,11 @@ public class dodaj extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_dodaj);
+        setContentView(R.layout.activity_add);
 
-        editTextTitle = (EditText) findViewById(R.id.editTextTytulDodaj);
-        editTextValue = (EditText) findViewById(R.id.editTextKwotaDodaj);
-        editTextDate = (EditText) findViewById(R.id.editTextDataDodaj);
+        editTextTitle = (EditText) findViewById(R.id.editTextTitleAdd);
+        editTextValue = (EditText) findViewById(R.id.editTextValueAdd);
+        editTextDate = (EditText) findViewById(R.id.editTextDateAdd);
 
 
         Calendar calendar = Calendar.getInstance();
@@ -53,7 +55,7 @@ public class dodaj extends AppCompatActivity
 
     }
 
-    public void onClickCalendarDodaj(View view)
+    public void onClickCalendaAdd(View view)
     {
         DatePickerDialog.OnDateSetListener listener = new DatePickerDialog.OnDateSetListener()
         {
@@ -67,7 +69,7 @@ public class dodaj extends AppCompatActivity
                     monthS = "0" + monthS;
                 if (dayOfMonth  < 10)
                     dayS = "0" + dayS;
-                EditText textViewDate = (EditText) findViewById(R.id.editTextDataDodaj);
+                EditText textViewDate = (EditText) findViewById(R.id.editTextDateAdd);
                 textViewDate.setText((year) + "/" + monthS + "/" + dayS);
             }
         };
@@ -93,12 +95,12 @@ public class dodaj extends AppCompatActivity
         editTextDate.setText(year + "/" + monthS + "/" + dayS);
     }
 
-    public void onClickDodaj(View view)
+    public void onClickAdd(View view)
     {
 
         if (editTextValue.getText().toString().isEmpty() || Double.parseDouble(editTextValue.getText().toString()) == 0.0)
         {
-            Toast.makeText(this,"Kwota nie może być zerowa!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.info_empty_value), Toast.LENGTH_SHORT).show();
             return;
         }
         if (editTextTitle.getText().toString().isEmpty())
@@ -131,7 +133,7 @@ public class dodaj extends AppCompatActivity
         finish();
     }
 
-    public void onClickAnuluj(View view)
+    public void onClickCancel(View view)
     {
         setResult(RESULT_CANCELED);
         finish();

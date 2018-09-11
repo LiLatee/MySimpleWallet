@@ -6,20 +6,35 @@
     <item
         android:id="@+id/menu_search"
         android:icon="@android:drawable/ic_menu_search"
-        android:title="Szukaj"
-        android:hint="Wyszukaj tytuł..."
+        android:title="@string/search"
+        android:hint="@string/search_title"
         app:actionViewClass="android.support.v7.widget.SearchView"
         app:showAsAction="collapseActionView|ifRoom" />
 
     <item android:id="@+id/filter"
-        android:title="Filtracja"
+        android:title="@string/filtration"
         android:onClick="onClickFilter"
         app:showAsAction="always"
         android:icon="@drawable/filter_outline"/>
 
     <item android:id="@+id/clearAll"
-        android:title="Wyczyść dane"
+        android:title="@string/clear_data"
         android:onClick="onClickClearAll"
+        app:showAsAction="never" />
+
+    <item android:id="@+id/loadFile"
+        android:title="@string/load_backup"
+        android:onClick="onClickLoadFile"
+        app:showAsAction="never" />
+
+    <item android:id="@+id/saveFile"
+        android:title="@string/save_backup"
+        android:onClick="onClickSaveFile"
+        app:showAsAction="never" />
+
+    <item android:id="@+id/changeLanguage"
+        android:title="@string/change_language"
+        android:onClick="onClickChangeLanguage"
         app:showAsAction="never" />
 
 

@@ -8,7 +8,7 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <style name="StanNazwa">
+    <style name="BalanceName">
         <!-- Customize your theme here. -->
         <item name="android:typeface">sans</item>
         <item name="android:textSize">30sp</item>
@@ -19,7 +19,7 @@
         <item name="android:layout_rowWeight">1</item>
     </style>
 
-    <style name="StanIlosc">
+    <style name="BalanceValue">
         <!-- Customize your theme here. -->
         <item name="android:typeface">sans</item>
         <item name="android:textSize">40sp</item>

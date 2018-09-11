@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_weight="1"
-    android:text="Kwota"
+    android:text="@string/value"
     android:maxEms="2"
     style="@style/TableHeader"
     android:onClick="onClickValue"/>

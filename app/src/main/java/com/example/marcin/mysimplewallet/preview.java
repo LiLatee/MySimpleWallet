@@ -1,5 +1,7 @@
 package com.example.marcin.mysimplewallet;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -20,9 +22,9 @@ public class preview extends AppCompatActivity
         String value = getIntent().getExtras().getString("value");
         String date = getIntent().getExtras().getString("date");
 
-        textViewTitle = (TextView) findViewById(R.id.textViewTytulDodaj) ;
-        textViewValue = (TextView) findViewById(R.id.textViewKwotaDodaj) ;
-        textViewDate = (TextView) findViewById(R.id.textViewDataDodaj) ;
+        textViewTitle = (TextView) findViewById(R.id.textViewTitleAdd) ;
+        textViewValue = (TextView) findViewById(R.id.textViewValueAdd) ;
+        textViewDate = (TextView) findViewById(R.id.textViewDateAdd) ;
 
         textViewTitle.setText(title);
         textViewValue.setText(value);

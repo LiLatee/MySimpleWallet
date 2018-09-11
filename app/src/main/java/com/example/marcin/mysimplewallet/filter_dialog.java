@@ -1,42 +1,25 @@
 package com.example.marcin.mysimplewallet;
 
 import android.app.DatePickerDialog;
-import android.app.Dialog;
-import android.content.DialogInterface;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.view.menu.ActionMenuItemView;
-import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.TableLayout;
-import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.regex.Pattern;
-
-import static android.content.Context.MODE_PRIVATE;
 
 public class filter_dialog extends DialogFragment
 {
@@ -133,7 +116,7 @@ public class filter_dialog extends DialogFragment
                 String value2 = editTextTo.getText().toString();
                 if (value1.isEmpty() || value2.isEmpty())
                 {
-                    Toast.makeText(getContext(), "Wartości nie moga być puste!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_empty_value), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 if (selectedButton.getTag().equals("byDate"))
@@ -141,14 +124,14 @@ public class filter_dialog extends DialogFragment
                     String regex = "^[0-9]{4}/(0[1-9]|1[0-2])/([0-2][0-9]|3[0-1])$";
                     if (!Pattern.matches(regex, value1) || !Pattern.matches(regex, value2))
                     {
-                        Toast.makeText(getContext(), "Data musi być w formacie YYYY/MM/DD lub podano nieprawidłową wartość.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_date_format_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     Date firstDate = new Date(value1);
                     Date secondDate = new Date(value2);
                     if(firstDate.after(secondDate))
                     {
-                        Toast.makeText(getContext(), "Pierwsza data musi być przed drugą!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_date_order_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -160,12 +143,12 @@ public class filter_dialog extends DialogFragment
                     String regex = "^(0|([1-9][0-9]*))(\\.[0-9]+)?$";
                     if (!Pattern.matches(regex, value1) || !Pattern.matches(regex, value2))
                     {
-                        Toast.makeText(getContext(), "Dozwolone znaki to (0-9) oraz kropka (.).", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_value_available_characters), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     if (Double.parseDouble(value1) > Double.parseDouble(value2))
                     {
-                        Toast.makeText(getContext(), "Pierwsza wartość musi być mniejsza niż druga!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_value_order_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE " + "ABS(Value) BETWEEN " + value1 + " AND " + value2;
@@ -289,5 +272,6 @@ public class filter_dialog extends DialogFragment
         editTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
         editTextTo.setText(year + "/" + monthS + "/" + dayS);
     }
+
 
 }

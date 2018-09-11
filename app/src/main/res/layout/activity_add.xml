@@ -4,34 +4,34 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".dodaj"
+    tools:context=".add"
     android:orientation="vertical">
 
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Tytuł"
+        android:text="@string/title"
         android:textColor="#4e6ec6"
         android:textSize="20sp"
         android:gravity="start" />
 
     <EditText
-        android:id="@+id/editTextTytulDodaj"
+        android:id="@+id/editTextTitleAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Kwota"
+        android:text="@string/value"
         android:textColor="#4e6ec6"
         android:textSize="20sp"
         android:gravity="start" />
 
 
     <EditText
-        android:id="@+id/editTextKwotaDodaj"
+        android:id="@+id/editTextValueAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="numberDecimal" />
@@ -44,7 +44,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Data"
+            android:text="@string/date"
             android:textColor="#4e6ec6"
             android:textSize="20sp"
             android:gravity="start"
@@ -55,14 +55,14 @@
             android:layout_height="wrap_content"
             android:background="#4e6ec6"
             app:srcCompat="@android:drawable/ic_menu_my_calendar"
-            android:onClick="onClickCalendarDodaj"/>
+            android:onClick="onClickCalendaAdd"/>
 
 
     </LinearLayout>
 
 
     <EditText
-        android:id="@+id/editTextDataDodaj"
+        android:id="@+id/editTextDateAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="DD.MM.YYYY" />
@@ -74,20 +74,20 @@
 
 
         <Button
-            android:id="@+id/buttonDodajWydatek"
+            android:id="@+id/buttonAddOutgo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Dodaj"
-            android:onClick="onClickDodaj"/>
+            android:text="@string/add"
+            android:onClick="onClickAdd"/>
 
         <Button
-            android:id="@+id/buttonAnulujWydatek"
+            android:id="@+id/buttonCancelOutgo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Anuluj"
-            android:onClick="onClickAnuluj"/>
+            android:text="@string/cancel"
+            android:onClick="onClickCancel"/>
 
 
     </LinearLayout>

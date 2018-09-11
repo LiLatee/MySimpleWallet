@@ -12,7 +12,7 @@
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="20dp"
-        android:text="Filtracja"
+        android:text="@string/filtration"
         android:textSize="30sp"
         android:textStyle="bold" />
 
@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:checked="true"
             android:tag="byDate"
-            android:text="po dacie"
+            android:text="@string/by_date"
             android:textSize="15sp" />
 
 
@@ -41,13 +41,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="byValue"
-            android:text="po kwocie"
+            android:text="@string/by_value"
             android:textSize="15sp" />
 
     </RadioGroup>
 
     <TextView
-        android:id="@+id/zakres"
+        android:id="@+id/range"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/radioGroup"
@@ -55,25 +55,25 @@
         android:layout_marginEnd="20dp"
         android:layout_marginStart="20dp"
         android:singleLine="true"
-        android:text="Wybierz zakres"
+        android:text="@string/choose_range"
         android:textSize="20sp" />
 
     <TextView
         android:id="@+id/textViewFrom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignStart="@id/zakres"
-        android:layout_below="@id/zakres"
+        android:layout_alignStart="@id/range"
+        android:layout_below="@id/range"
         android:layout_marginEnd="20dp"
         android:singleLine="true"
-        android:text="Od"
+        android:text="@string/from"
         android:textSize="20sp" />
 
     <ImageButton
         android:id="@+id/imageButtonFrom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/zakres"
+        android:layout_below="@id/range"
         android:layout_marginEnd="20dp"
         android:layout_toEndOf="@id/textViewFrom"
         android:background="#4e6ec6"
@@ -100,7 +100,7 @@
         android:layout_below="@id/editTextFrom"
         android:layout_marginEnd="20dp"
         android:singleLine="true"
-        android:text="Do"
+        android:text="@string/to"
         android:textSize="20sp" />
 
     <ImageButton
@@ -156,7 +156,7 @@
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
             android:lines="2"
-            android:text="USUŃ FILTR"
+            android:text="@string/remove_filter"
             android:textColor="@color/colorAccent"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -168,7 +168,7 @@
             android:layout_marginBottom="20dp"
             android:layout_weight="1"
             android:background="?attr/selectableItemBackground"
-            android:text="ANULUJ"
+            android:text="@string/CANCEL"
             android:textColor="@color/colorAccent"
             android:textSize="20sp"
             android:textStyle="bold"
