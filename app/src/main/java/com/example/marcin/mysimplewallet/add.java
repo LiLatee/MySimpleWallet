@@ -34,13 +34,17 @@ public class add extends AppCompatActivity
         // Language settings.
         selectedLanguage = getIntent().getExtras().getString("language");
 
-        Locale locale = new Locale(selectedLanguage);
-        Locale.setDefault(locale);
-        Configuration config = new Configuration();
-        config.locale = locale;
-        getBaseContext().getResources().updateConfiguration(config,
-                getBaseContext().getResources().getDisplayMetrics());
-
+        if (!selectedLanguage.equals("-"))
+        {
+            Locale locale = new Locale(selectedLanguage);
+            Locale.setDefault(locale);
+            Configuration config = new Configuration();
+            config.locale = locale;
+            getBaseContext().getResources().updateConfiguration(config,
+                    getBaseContext().getResources().getDisplayMetrics());
+        }
+        else
+            selectedLanguage = Locale.getDefault().toLanguageTag();
 
         editTextTitle = (EditText) findViewById(R.id.editTextTitleAdd);
         editTextValue = (EditText) findViewById(R.id.editTextValueAdd);
@@ -77,12 +81,18 @@ public class add extends AppCompatActivity
         // Language settings.
         selectedLanguage = getIntent().getExtras().getString("language");
 
-        Locale locale = new Locale(selectedLanguage);
-        Locale.setDefault(locale);
-        Configuration config = new Configuration();
-        config.locale = locale;
-        getBaseContext().getResources().updateConfiguration(config,
-                getBaseContext().getResources().getDisplayMetrics());
+        if (!selectedLanguage.equals("-"))
+        {
+            Locale locale = new Locale(selectedLanguage);
+            Locale.setDefault(locale);
+            Configuration config = new Configuration();
+            config.locale = locale;
+            getBaseContext().getResources().updateConfiguration(config,
+                    getBaseContext().getResources().getDisplayMetrics());
+        }
+        else
+            selectedLanguage = Locale.getDefault().toLanguageTag();;
+
     }
 
     public void onClickCalendarAdd(View view)

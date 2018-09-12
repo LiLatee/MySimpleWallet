@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity
     private SQLiteDatabase db;
     private TextView textViewBalance, textViewIncome, textViewOutgo;
     private SharedPreferences settings;
-    private String selectedLanguage = null;
+    private String selectedLanguage = "-";
 
 
     @Override
@@ -54,19 +54,19 @@ public class MainActivity extends AppCompatActivity
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
+        selectedLanguage = settings.getString("locale", "-");
+        if (!selectedLanguage.equals("-"))
+        {
+            Locale locale = new Locale(selectedLanguage);
+            Locale.setDefault(locale);
+            Configuration config = new Configuration();
+            config.locale = locale;
+            getBaseContext().getResources().updateConfiguration(config,
+                    getBaseContext().getResources().getDisplayMetrics());
+            settings.edit().putString("locale", selectedLanguage).apply();
 
-        if (settings.getString("locale", "en").equals("en"))
-            selectedLanguage = "en";
-        else
-            selectedLanguage = "pl";
+        }
 
-        Locale locale = new Locale(selectedLanguage);
-        Locale.setDefault(locale);
-        Configuration config = new Configuration();
-        config.locale = locale;
-        getBaseContext().getResources().updateConfiguration(config,
-                getBaseContext().getResources().getDisplayMetrics());
-        settings.edit().putString("locale", selectedLanguage).apply();
 
         setContentView(R.layout.activity_main);
 
@@ -92,20 +92,24 @@ public class MainActivity extends AppCompatActivity
     {
         super.onResume();
 
+        // Language settings.
         settings = getPreferences(MODE_PRIVATE);
+        selectedLanguage = settings.getString("locale", "-");
 
-        if (settings.getString("locale", "en").equals("en"))
-            selectedLanguage = "en";
-        else
-            selectedLanguage = "pl";
+        if (!selectedLanguage.equals("-"))
+        {
 
-        Locale locale = new Locale(selectedLanguage);
-        Locale.setDefault(locale);
-        Configuration config = new Configuration();
-        config.locale = locale;
-        getBaseContext().getResources().updateConfiguration(config,
-                getBaseContext().getResources().getDisplayMetrics());
-        settings.edit().putString("locale", selectedLanguage).apply();
+            Locale locale = new Locale(selectedLanguage);
+            Locale.setDefault(locale);
+            Configuration config = new Configuration();
+            config.locale = locale;
+            getBaseContext().getResources().updateConfiguration(config,
+                    getBaseContext().getResources().getDisplayMetrics());
+            settings.edit().putString("locale", selectedLanguage).apply();
+
+        }
+
+
     }
 
     private static final int REQUEST_CODE_WYDATEK = 0;
@@ -119,6 +123,7 @@ public class MainActivity extends AppCompatActivity
         // 1 - income
         i.putExtra("IncomeOrOutgo", 0);
         i.putExtra("edit?", "false");
+        Log.d("pies",selectedLanguage + "outgo");
         i.putExtra("language", selectedLanguage);
         startActivityForResult(i, REQUEST_CODE_WYDATEK);
 
@@ -738,7 +743,9 @@ public class MainActivity extends AppCompatActivity
         {
             shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
-        } else
+        }
+
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
         {
             // Creates database if not exists.
             db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
@@ -819,7 +826,8 @@ public class MainActivity extends AppCompatActivity
         {
             shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
             requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
-        } else
+        }
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
         {
             final Scanner scanner;
             File filepath = new File(root, FILENAME);  // file path to save
@@ -951,13 +959,15 @@ public class MainActivity extends AppCompatActivity
                 else if (strName.equals("Polski"))
                     selectedLanguage = "pl";
 
+                settings = getPreferences(MODE_PRIVATE);
                 Locale locale = new Locale(selectedLanguage);
                 Locale.setDefault(locale);
                 Configuration config = new Configuration();
                 config.locale = locale;
                 getBaseContext().getResources().updateConfiguration(config,
                         getBaseContext().getResources().getDisplayMetrics());
-                settings.edit().putString("locale", selectedLanguage).apply();
+                settings.edit().putString("locale", selectedLanguage).commit();
+
                 finish();
                 Intent refresh = new Intent(getBaseContext(), MainActivity.class);
                 startActivity(refresh);

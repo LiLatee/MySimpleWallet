@@ -25,12 +25,17 @@ public class preview extends AppCompatActivity
         // Language settings.
         selectedLanguage = getIntent().getExtras().getString("language");
 
-        Locale locale = new Locale(selectedLanguage);
-        Locale.setDefault(locale);
-        Configuration config = new Configuration();
-        config.locale = locale;
-        getBaseContext().getResources().updateConfiguration(config,
-                getBaseContext().getResources().getDisplayMetrics());
+        if (!selectedLanguage.equals("-"))
+        {
+            Locale locale = new Locale(selectedLanguage);
+            Locale.setDefault(locale);
+            Configuration config = new Configuration();
+            config.locale = locale;
+            getBaseContext().getResources().updateConfiguration(config,
+                    getBaseContext().getResources().getDisplayMetrics());
+        }
+        else
+            selectedLanguage = Locale.getDefault().toLanguageTag();;
 
 
         String title = getIntent().getExtras().getString("title");
@@ -54,12 +59,18 @@ public class preview extends AppCompatActivity
         // Language settings.
         selectedLanguage = getIntent().getExtras().getString("language");
 
-        Locale locale = new Locale(selectedLanguage);
-        Locale.setDefault(locale);
-        Configuration config = new Configuration();
-        config.locale = locale;
-        getBaseContext().getResources().updateConfiguration(config,
-                getBaseContext().getResources().getDisplayMetrics());
+        if (!selectedLanguage.equals("-"))
+        {
+            Locale locale = new Locale(selectedLanguage);
+            Locale.setDefault(locale);
+            Configuration config = new Configuration();
+            config.locale = locale;
+            getBaseContext().getResources().updateConfiguration(config,
+                    getBaseContext().getResources().getDisplayMetrics());
+        }
+        else
+            selectedLanguage = Locale.getDefault().toLanguageTag();;
+
     }
 
     public void onClickBack(View view)
