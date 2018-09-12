@@ -9,10 +9,10 @@
     <string name="search_title">Search a title...</string>
     <string name="info_registration_deleted">Registration has been deleted.</string>
     <string name="information">Information</string>
-    <string name="info_about_saving_1">The backup file has been saved under the path\\n\\n</string>
-    <string name="info_about_saving_2">\\n\\nIn order to restore the backup later, copy the above-mentioned file and save it in a safe place. Then, after the new installation of the application, place the file in the same location and trigger the backup from the option.</string>
-    <string name="info_about_restoring_1">Restore file has not been found under this path\\n\\n</string>
-    <string name="info_about_restoring_2">\\n\\nIn order to restoring backup please place backup file in the mentioned path, then retrigger load data from backup file in options.</string>
+    <string name="info_about_saving_1">The backup file has been saved under the path\n\n</string>
+    <string name="info_about_saving_2">\n\nIn order to restore the backup later, copy the above-mentioned file and save it in a safe place. Then, after the new installation of the application, place the file in the same location and trigger the backup from the option.</string>
+    <string name="info_about_restoring_1">Restore file has not been found under this path\n\n</string>
+    <string name="info_about_restoring_2">\n\nIn order to restoring backup please place backup file in the mentioned path, then retrigger load data from backup file in options.</string>
     <string name="warning">Warning!</string>
     <string name="info_clear_all_question">The action will delete all data. Continue?</string>
     <string name="info_data_loaded">Data has been loaded.</string>

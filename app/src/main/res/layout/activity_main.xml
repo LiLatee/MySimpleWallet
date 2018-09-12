@@ -79,10 +79,17 @@
             />
     </GridLayout>
 
+    <TableLayout
+        android:id="@+id/tableLayoutHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/gridLayout1">
+    </TableLayout>
+
     <ScrollView
        android:layout_width="match_parent"
        android:layout_height="wrap_content"
-       android:layout_below="@id/gridLayout1"
+       android:layout_below="@id/tableLayoutHeader"
        android:layout_above="@id/linearLayoutButtons">
 
        <TableLayout

@@ -10,10 +10,10 @@
     <string name="search_title">Wyszukaj tytułu...</string>
     <string name="info_registration_deleted">Wpis został usunięty.</string>
     <string name="information">Informacje</string>
-    <string name="info_about_saving_1">"Plik z kopią zapasową został zapisany pod ścieżką\\n\\n  "</string>
-    <string name="info_about_saving_2">\\n\\nW celu późniejszego przywrócenia kopii zapasowej należy skopiować wyżej podany plik i zapisać w bezpiecznym miejsu. Następnie po nowej instalacji aplikacji umieścić plik w tym samym miejsu oraz wywołać wczytanie kopii zapasowej z opcji.</string>
-    <string name="info_about_restoring_1">Plik z kopią zapasową nie został odnaleziony pod ścieżką\\n\\n</string>
-    <string name="info_about_restoring_2">\\n\\nW celu przywrócenia kopii zapasowe proszę umieścić plik kopii zapasowej w podanej ścieżce oraz ponownie wywołać wczytanie kopii zapasowej z opcji.</string>
+    <string name="info_about_saving_1">"Plik z kopią zapasową został zapisany pod ścieżką\n\n  "</string>
+    <string name="info_about_saving_2">\n\nW celu późniejszego przywrócenia kopii zapasowej należy skopiować wyżej podany plik i zapisać w bezpiecznym miejsu. Następnie po nowej instalacji aplikacji umieścić plik w tym samym miejsu oraz wywołać wczytanie kopii zapasowej z opcji.</string>
+    <string name="info_about_restoring_1">Plik z kopią zapasową nie został odnaleziony pod ścieżką\n\n</string>
+    <string name="info_about_restoring_2">\n\nW celu przywrócenia kopii zapasowe proszę umieścić plik kopii zapasowej w podanej ścieżce oraz ponownie wywołać wczytanie kopii zapasowej z opcji.</string>
     <string name="warning">Ostrzeżenie!</string>
     <string name="info_data_loaded">Dane zostały wczytane.</string>
     <string name="info_empty_value">Wartość nie może być pusta.</string>

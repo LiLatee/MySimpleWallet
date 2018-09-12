@@ -51,9 +51,9 @@ public class add extends AppCompatActivity
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
         Date date = null;
         try {date = calendar.getTime(); } catch (Exception e) {e.printStackTrace();}
-        String data = formatter.format(date);
+        String dataS = formatter.format(date);
 
-        editTextDate.setText(data);
+        editTextDate.setText(dataS);
 
         // Do it if edit mode.
         if (getIntent().getExtras().getString("edit?").equals("true"))
@@ -85,7 +85,7 @@ public class add extends AppCompatActivity
                 getBaseContext().getResources().getDisplayMetrics());
     }
 
-    public void onClickCalendaAdd(View view)
+    public void onClickCalendarAdd(View view)
     {
         DatePickerDialog.OnDateSetListener listener = new DatePickerDialog.OnDateSetListener()
         {
@@ -154,10 +154,10 @@ public class add extends AppCompatActivity
         else
             i.putExtra("edit?", "false");
 
-        i.putExtra("tytul", editTextTitle.getText().toString());
-        if ( incomeOrOutgo == 0) i.putExtra( "kwota", "-" + editTextValue.getText().toString());
-        else i.putExtra("kwota", editTextValue.getText().toString());
-        i.putExtra("data", editTextDate.getText().toString());
+        i.putExtra("title", editTextTitle.getText().toString());
+        if ( incomeOrOutgo == 0) i.putExtra( "value", "-" + editTextValue.getText().toString());
+        else i.putExtra("value", editTextValue.getText().toString());
+        i.putExtra("date", editTextDate.getText().toString());
         i.putExtra("incomeOrOutgo", incomeOrOutgo);
         setResult(RESULT_OK, i);
         finish();

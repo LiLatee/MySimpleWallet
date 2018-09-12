@@ -8,9 +8,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.ContextMenu;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -30,6 +31,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,9 +43,8 @@ public class MainActivity extends AppCompatActivity
 {
     private SQLiteDatabase db;
     private TextView textViewBalance, textViewIncome, textViewOutgo;
-    public Context context;
-    public SharedPreferences settings;
-    public String selectedLanguage = null;
+    private SharedPreferences settings;
+    private String selectedLanguage = null;
 
 
     @Override
@@ -65,7 +66,7 @@ public class MainActivity extends AppCompatActivity
         config.locale = locale;
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
-        settings.edit().putString("locale", selectedLanguage).commit();
+        settings.edit().putString("locale", selectedLanguage).apply();
 
         setContentView(R.layout.activity_main);
 
@@ -73,9 +74,8 @@ public class MainActivity extends AppCompatActivity
         // Creates backup folder.
         File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
         if (!root.exists())
-        {
             root.mkdirs(); // this will create folder.
-        }
+
 
         textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
         textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
@@ -105,12 +105,12 @@ public class MainActivity extends AppCompatActivity
         config.locale = locale;
         getBaseContext().getResources().updateConfiguration(config,
                 getBaseContext().getResources().getDisplayMetrics());
-        settings.edit().putString("locale", selectedLanguage).commit();
+        settings.edit().putString("locale", selectedLanguage).apply();
     }
 
-    static final int REQUEST_CODE_WYDATEK = 0;
-    static final int REQUEST_CODE_PRZYCHOD = 1;
-    static final int REQUEST_CODE_EDIT = 2;
+    private static final int REQUEST_CODE_WYDATEK = 0;
+    private static final int REQUEST_CODE_PRZYCHOD = 1;
+    private static final int REQUEST_CODE_EDIT = 2;
 
     public void onClickOutgo(View view)
     {
@@ -139,53 +139,52 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent Data)
     {
-        String tytul = null;
-        String kwota = null;
-        String data = null;
+        String title = null;
+        String value = null;
+        String date = null;
         int incomeOrOutgo = 0;
 
         if (resultCode == RESULT_OK)
         {
-
-            if (Data.hasExtra("tytul"))
-                tytul = Data.getExtras().getString("tytul");
-            if (Data.hasExtra("kwota"))
-                kwota = Data.getExtras().getString("kwota");
-            if (Data.hasExtra("data"))
-                data = Data.getExtras().getString("data");
+            if (Data.hasExtra("title"))
+                title = Data.getExtras().getString("title");
+            if (Data.hasExtra("value"))
+                value = Data.getExtras().getString("value");
+            if (Data.hasExtra("date"))
+                date = Data.getExtras().getString("date");
             if (Data.hasExtra("incomeOrOutgo"))
                 incomeOrOutgo = Data.getExtras().getInt("incomeOrOutgo");
 
             if (requestCode == REQUEST_CODE_WYDATEK)
             {
-                addNewRow(tytul, kwota, data, 0);
-                addToDatabase(tytul, kwota, data, 0);
+                addNewRow(title, value, date, 0);
+                addToDatabase(title, value, date, 0);
 
-                TextView stan = (TextView) findViewById(R.id.textViewBalanceValue);
-                double kwotaD = Double.parseDouble(stan.getText().toString());
-                kwotaD += Double.parseDouble(kwota);
-                stan.setText(Double.toString(kwotaD));
+                TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
+                double valueD = Double.parseDouble(balance.getText().toString());
+                valueD += Double.parseDouble(value);
+                balance.setText(Double.toString(valueD));
 
                 TextView wydatki = (TextView) findViewById(R.id.textViewOutgoValue);
                 double wydatkiD = Double.parseDouble(wydatki.getText().toString());
-                wydatkiD += Double.parseDouble(kwota.substring(1));
+                wydatkiD += Double.parseDouble(value.substring(1));
                 wydatki.setText(Double.toString(wydatkiD));
 
 
             } else if (requestCode == REQUEST_CODE_PRZYCHOD)
             {
 
-                addNewRow(tytul, kwota, data, 1);
-                addToDatabase(tytul, kwota, data, 1);
+                addNewRow(title, value, date, 1);
+                addToDatabase(title, value, date, 1);
 
-                TextView stan = (TextView) findViewById(R.id.textViewBalanceValue);
-                double kwotaD = Double.parseDouble(stan.getText().toString());
-                kwotaD += Double.parseDouble(kwota);
-                stan.setText(Double.toString(kwotaD));
+                TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
+                double valueD = Double.parseDouble(balance.getText().toString());
+                valueD += Double.parseDouble(value);
+                balance.setText(Double.toString(valueD));
 
                 TextView przychod = (TextView) findViewById(R.id.textViewIncomeValue);
                 double przychodD = Double.parseDouble(przychod.getText().toString());
-                przychodD += Double.parseDouble(kwota);
+                przychodD += Double.parseDouble(value);
 
                 przychod.setText(Double.toString(przychodD));
 
@@ -200,9 +199,9 @@ public class MainActivity extends AppCompatActivity
                     String oldData = Data.getExtras().getString("oldDate");
                     tableLayout.removeView(tableRowToEditDelete);
                     String sqlQuery = " UPDATE IncomeOutgo SET" +
-                            " Title = '" + tytul + "'" +
-                            ", Value = " + kwota +
-                            ", Date = '" + data + "'" +
+                            " Title = '" + title + "'" +
+                            ", Value = " + value +
+                            ", Date = '" + date + "'" +
                             " WHERE Title = '" + oldTytul + "'" +
                             " AND Value = " + oldKwota +
                             " AND Date = '" + oldData + "'";
@@ -214,17 +213,17 @@ public class MainActivity extends AppCompatActivity
                     Double oldIncome = Double.parseDouble(textViewIncome.getText().toString());
                     Double oldOutgo = Double.parseDouble(textViewOutgo.getText().toString());
 
-                    Double newBalance = oldBalance - Double.parseDouble(oldKwota) + Double.parseDouble(kwota);
+                    Double newBalance = oldBalance - Double.parseDouble(oldKwota) + Double.parseDouble(value);
                     textViewBalance.setText(Double.toString(newBalance));
                     Double newIncome, newOutgo;
 
                     if (incomeOrOutgo == 1)
                     {
-                        newIncome = oldIncome - Double.parseDouble(oldKwota) + Double.parseDouble(kwota);
+                        newIncome = oldIncome - Double.parseDouble(oldKwota) + Double.parseDouble(value);
                         textViewIncome.setText(Double.toString(newIncome));
                     } else
                     {
-                        newOutgo = oldOutgo + Double.parseDouble(oldKwota) - Double.parseDouble(kwota);
+                        newOutgo = oldOutgo + Double.parseDouble(oldKwota) - Double.parseDouble(value);
                         textViewOutgo.setText(Double.toString(newOutgo));
                     }
                     sendQueryAndShow("SELECT * FROM IncomeOutgo");
@@ -237,11 +236,11 @@ public class MainActivity extends AppCompatActivity
     // int wydatek_przychod
     // wydatek == 0
     // przychod == 1
-    public void addNewRow(String tytul, String kwota, String data, int wydatek_przychod)
+    public void addNewRow(String title, String value, String date, int wydatek_przychod)
     {
-        final String titleF = tytul;
-        final String valueF = kwota;
-        final String dateF = data;
+        final String titleF = title;
+        final String valueF = value;
+        final String dateF = date;
         View.OnClickListener onClickListener = new View.OnClickListener()
         {
             @Override
@@ -265,7 +264,7 @@ public class MainActivity extends AppCompatActivity
 
         TextView textViewTytul = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
         textViewTytul.setWidth(TableRowWithContextMenuInfo.LayoutParams.MATCH_PARENT);
-        textViewTytul.setText(tytul);
+        textViewTytul.setText(title);
         textViewTytul.setLayoutParams(size2);
         textViewTytul.setTextSize(20);
         tableRow.addView(textViewTytul);
@@ -273,16 +272,16 @@ public class MainActivity extends AppCompatActivity
         TextView textViewKwota = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
         textViewKwota.setLayoutParams(size);
         textViewKwota.setMaxEms(2);
-        textViewKwota.setText(kwota);
+        textViewKwota.setText(value);
         tableRow.addView(textViewKwota);
 
         TextView textViewData = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
         textViewData.setMaxEms(2);
 
-        // Changes data show format from yyyy/mm/dd to dd/mm/yy
-        String a = data.substring(2, 4);
-        String b = data.substring(8, 10);
-        textViewData.setText(b + data.substring(4, 8) + a);
+        // Changes date show format from yyyy/mm/dd to dd/mm/yy
+        String a = date.substring(2, 4);
+        String b = date.substring(8, 10);
+        textViewData.setText(b + date.substring(4, 8) + a);
         textViewData.setLayoutParams(size);
         tableRow.addView(textViewData);
 
@@ -300,7 +299,7 @@ public class MainActivity extends AppCompatActivity
         registerForContextMenu(tableRow);
         tableRow.setOnClickListener(onClickListener);
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        tableLayout.addView(tableRow, 1);
+        tableLayout.addView(tableRow, 0);
 
 
     }
@@ -325,11 +324,10 @@ public class MainActivity extends AppCompatActivity
         textViewDate.setLayoutParams(size);
         tableRow.addView(textViewDate);
 
-        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayoutHeader);
         tableLayout.addView(tableRow, 0);
     }
 
-    //TODO: sprawdzić czy tu musza być cudzysłowa
     public void addToDatabase(String title, String value, String date, int incomeOrOutgo)
     {
         String sqlQuery = null;
@@ -427,7 +425,6 @@ public class MainActivity extends AppCompatActivity
         // Loads data from database.
         ArrayList<Registration> registrations = new ArrayList<Registration>();
         Cursor cursor = db.rawQuery(sqlQuery, null);
-
         if (cursor.moveToFirst())
         {
             do
@@ -603,7 +600,7 @@ public class MainActivity extends AppCompatActivity
         inflater.inflate(R.menu.context_menu, menu);
     }
 
-    TableRow tableRowToEditDelete;
+    private TableRow tableRowToEditDelete;
 
     @Override
     public boolean onContextItemSelected(MenuItem item)
@@ -731,7 +728,7 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    final static String FILENAME = "/backupMySimpleWallet";
+    private static final String FILENAME = "/backupMySimpleWallet";
     private static final int WRITE_EXTERNAL_STORAGE = 1;
     private static final int READ_EXTERNAL_STORAGE = 1;
 
@@ -788,12 +785,20 @@ public class MainActivity extends AppCompatActivity
             writer.flush();
             writer.close();
 
+
+            String message = getString(R.string.info_about_saving_1) + filepath.getPath().toString() +
+                    getString(R.string.info_about_saving_2) + "\n\n";
+
+            TextView showText = new TextView(this);
+            showText.setGravity(Gravity.CENTER);
+            showText.setTextSize(15);
+            showText.setTextColor(Color.BLACK);
+            showText.setText(message);
+            showText.setTextIsSelectable(true);
+
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getString(R.string.information));
-            String message = getString(R.string.info_about_saving_1) + filepath.getPath().toString() +
-                    getString(R.string.info_about_saving_1);
-
-            builder.setMessage(message);
+            builder.setView(showText);
 
             AlertDialog dialog = builder.create();
             dialog.show();
@@ -805,29 +810,44 @@ public class MainActivity extends AppCompatActivity
     public void onClickLoadFile(MenuItem item) throws IOException
     {
 
+        File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
+        if (!root.exists())
+        {
+            root.mkdirs(); // this will create folder.
+        }
         if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
         {
             shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
             requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
         } else
         {
-            File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
+            final Scanner scanner;
             File filepath = new File(root, FILENAME);  // file path to save
-
-            if (!filepath.exists())
+            try
             {
+                scanner = new Scanner(filepath);
+                scanner.useDelimiter("\\n");
+            } catch (FileNotFoundException e)
+            {
+
+                String message = getString(R.string.info_about_restoring_1) + filepath.getPath().toString() +
+                        getString(R.string.info_about_restoring_2) + "\n\n";
+
+                TextView showText = new TextView(this);
+                showText.setGravity(Gravity.CENTER);
+                showText.setTextSize(15);
+                showText.setTextColor(Color.BLACK);
+                showText.setText(message);
+                showText.setTextIsSelectable(true);
+
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
                 builder.setTitle(getString(R.string.information));
-                String message = getString(R.string.info_about_restoring_1) + filepath.getPath().toString() +
-                        getString(R.string.info_about_restoring_2);
-
-                builder.setMessage(message);
+                builder.setView(showText);
 
                 AlertDialog dialog = builder.create();
                 dialog.show();
+                return;
             }
-            final Scanner scanner = new Scanner(filepath);
-            scanner.useDelimiter("\\n");
 
             // Clears all data.
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -937,7 +957,7 @@ public class MainActivity extends AppCompatActivity
                 config.locale = locale;
                 getBaseContext().getResources().updateConfiguration(config,
                         getBaseContext().getResources().getDisplayMetrics());
-                settings.edit().putString("locale", selectedLanguage).commit();
+                settings.edit().putString("locale", selectedLanguage).apply();
                 finish();
                 Intent refresh = new Intent(getBaseContext(), MainActivity.class);
                 startActivity(refresh);
