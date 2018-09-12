@@ -4,6 +4,7 @@ import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,17 +17,30 @@ import android.widget.Toast;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 public class add extends AppCompatActivity
 {
-    EditText editTextTitle, editTextValue, editTextDate;
-    String oldTitle, oldValue, oldDateS;
+    private EditText editTextTitle, editTextValue, editTextDate;
+    private String oldTitle, oldValue, oldDateS;
+    private String selectedLanguage = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add);
+
+        // Language settings.
+        selectedLanguage = getIntent().getExtras().getString("language");
+
+        Locale locale = new Locale(selectedLanguage);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.locale = locale;
+        getBaseContext().getResources().updateConfiguration(config,
+                getBaseContext().getResources().getDisplayMetrics());
+
 
         editTextTitle = (EditText) findViewById(R.id.editTextTitleAdd);
         editTextValue = (EditText) findViewById(R.id.editTextValueAdd);
@@ -53,6 +67,22 @@ public class add extends AppCompatActivity
             editTextDate.setText(oldDateS);
         }
 
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+
+        // Language settings.
+        selectedLanguage = getIntent().getExtras().getString("language");
+
+        Locale locale = new Locale(selectedLanguage);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.locale = locale;
+        getBaseContext().getResources().updateConfiguration(config,
+                getBaseContext().getResources().getDisplayMetrics());
     }
 
     public void onClickCalendaAdd(View view)

@@ -116,7 +116,7 @@ public class filter_dialog extends DialogFragment
                 String value2 = editTextTo.getText().toString();
                 if (value1.isEmpty() || value2.isEmpty())
                 {
-                    Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_empty_value), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), getString(R.string.info_empty_value), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 if (selectedButton.getTag().equals("byDate"))
@@ -124,14 +124,14 @@ public class filter_dialog extends DialogFragment
                     String regex = "^[0-9]{4}/(0[1-9]|1[0-2])/([0-2][0-9]|3[0-1])$";
                     if (!Pattern.matches(regex, value1) || !Pattern.matches(regex, value2))
                     {
-                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_date_format_error), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.info_date_format_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     Date firstDate = new Date(value1);
                     Date secondDate = new Date(value2);
                     if(firstDate.after(secondDate))
                     {
-                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_date_order_error), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.info_date_order_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -143,12 +143,12 @@ public class filter_dialog extends DialogFragment
                     String regex = "^(0|([1-9][0-9]*))(\\.[0-9]+)?$";
                     if (!Pattern.matches(regex, value1) || !Pattern.matches(regex, value2))
                     {
-                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_value_available_characters), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.info_value_available_characters), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     if (Double.parseDouble(value1) > Double.parseDouble(value2))
                     {
-                        Toast.makeText(getContext(), ((MainActivity)getActivity()).resources.getString(R.string.info_value_order_error), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.info_value_order_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE " + "ABS(Value) BETWEEN " + value1 + " AND " + value2;

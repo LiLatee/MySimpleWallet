@@ -1,10 +1,13 @@
 package com.example.marcin.mysimplewallet;
 
+import android.Manifest;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -30,6 +33,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Scanner;
 
 
@@ -38,24 +42,33 @@ public class MainActivity extends AppCompatActivity
     private SQLiteDatabase db;
     private TextView textViewBalance, textViewIncome, textViewOutgo;
     public Context context;
-    public Resources resources;
-    private String selectedLanguage;
+    public SharedPreferences settings;
+    public String selectedLanguage = null;
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        super.attachBaseContext(LocaleHelper.onAttach(newBase));
-    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        // Language settings.
+        settings = getPreferences(MODE_PRIVATE);
+
+        if (settings.getString("locale", "en").equals("en"))
+            selectedLanguage = "en";
+        else
+            selectedLanguage = "pl";
+
+        Locale locale = new Locale(selectedLanguage);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.locale = locale;
+        getBaseContext().getResources().updateConfiguration(config,
+                getBaseContext().getResources().getDisplayMetrics());
+        settings.edit().putString("locale", selectedLanguage).commit();
+
         setContentView(R.layout.activity_main);
 
-        SharedPreferences appPrefs = getPreferences(MODE_PRIVATE);
-        selectedLanguage = appPrefs.getString("selectedLanguage", "en");
-
-        context = LocaleHelper.setLocale(MainActivity.this, selectedLanguage);
-        resources = context.getResources();
 
         // Creates backup folder.
         File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
@@ -75,15 +88,24 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onPause()
+    protected void onResume()
     {
-        super.onPause();
+        super.onResume();
 
-        // Saves language.
-        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
-        SharedPreferences.Editor prefsEditor = sharedPreferences.edit();
-        prefsEditor.putString("selectedLanguage", selectedLanguage);
-        prefsEditor.commit();
+        settings = getPreferences(MODE_PRIVATE);
+
+        if (settings.getString("locale", "en").equals("en"))
+            selectedLanguage = "en";
+        else
+            selectedLanguage = "pl";
+
+        Locale locale = new Locale(selectedLanguage);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.locale = locale;
+        getBaseContext().getResources().updateConfiguration(config,
+                getBaseContext().getResources().getDisplayMetrics());
+        settings.edit().putString("locale", selectedLanguage).commit();
     }
 
     static final int REQUEST_CODE_WYDATEK = 0;
@@ -97,6 +119,7 @@ public class MainActivity extends AppCompatActivity
         // 1 - income
         i.putExtra("IncomeOrOutgo", 0);
         i.putExtra("edit?", "false");
+        i.putExtra("language", selectedLanguage);
         startActivityForResult(i, REQUEST_CODE_WYDATEK);
 
     }
@@ -108,6 +131,7 @@ public class MainActivity extends AppCompatActivity
         // 1 - income
         i.putExtra("IncomeOrOutgo", 1);
         i.putExtra("edit?", "false");
+        i.putExtra("language", selectedLanguage);
         startActivityForResult(i, REQUEST_CODE_PRZYCHOD);
 
     }
@@ -204,7 +228,7 @@ public class MainActivity extends AppCompatActivity
                         textViewOutgo.setText(Double.toString(newOutgo));
                     }
                     sendQueryAndShow("SELECT * FROM IncomeOutgo");
-                    Toast.makeText(this, resources.getString(R.string.info_registration_changed), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.info_registration_changed), Toast.LENGTH_SHORT).show();
                 }
             }
         }
@@ -224,6 +248,7 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v)
             {
                 Intent i = new Intent(getBaseContext(), preview.class);
+                i.putExtra("language", selectedLanguage);
                 i.putExtra("title", titleF);
                 i.putExtra("value", valueF);
                 i.putExtra("date", dateF);
@@ -497,7 +522,7 @@ public class MainActivity extends AppCompatActivity
     {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setCancelable(false);
-        builder.setTitle(resources.getString(R.string.info_clear_all_question));
+        builder.setTitle(getString(R.string.info_clear_all_question));
         builder.setPositiveButton("TAK", new DialogInterface.OnClickListener()
         {
             @Override
@@ -513,15 +538,15 @@ public class MainActivity extends AppCompatActivity
                 textViewOutgo.setText("0");
                 sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
-                Toast.makeText(getBaseContext(), resources.getString(R.string.info_clear_all), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getBaseContext(), getString(R.string.info_clear_all), Toast.LENGTH_SHORT).show();
             }
         });
-        builder.setNegativeButton(resources.getString(R.string.no), new DialogInterface.OnClickListener()
+        builder.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener()
         {
             @Override
             public void onClick(DialogInterface dialog, int which)
             {
-                Toast.makeText(getBaseContext(), resources.getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getBaseContext(), getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -545,7 +570,7 @@ public class MainActivity extends AppCompatActivity
         // Assumes current activity is the searchable activity
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
         searchView.setIconifiedByDefault(false); // Do not iconify the widget; expand it by default
-        searchView.setQueryHint(resources.getString(R.string.search_title));
+        searchView.setQueryHint(getString(R.string.search_title));
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener()
         {
             @Override
@@ -633,7 +658,7 @@ public class MainActivity extends AppCompatActivity
                 Log.d("pies", sqlQuery);
                 db.execSQL(sqlQuery);
                 tableLayout.removeView(tableRow);
-                Toast.makeText(this, resources.getString(R.string.info_registration_deleted), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.info_registration_deleted), Toast.LENGTH_SHORT).show();
                 return true;
             }
             default:
@@ -707,45 +732,54 @@ public class MainActivity extends AppCompatActivity
     }
 
     final static String FILENAME = "/backupMySimpleWallet";
+    private static final int WRITE_EXTERNAL_STORAGE = 1;
+    private static final int READ_EXTERNAL_STORAGE = 1;
+
     public void onClickSaveFile(MenuItem item) throws IOException
     {
-        // Creates database if not exists.
-        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                "Title VARCHAR," +
-                "Value DOUBLE NOT NULL, " +
-                "Date DATE," +
-                "IncomeOrOutgo INTEGER NOT NULL)";
-        db.execSQL(sqlDB);
-
-
-        // Loads data from database.
-        ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-        if (cursor.moveToFirst())
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
         {
-            do
+            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
+        } else
+        {
+            // Creates database if not exists.
+            db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+            String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                    "Title VARCHAR," +
+                    "Value DOUBLE NOT NULL, " +
+                    "Date DATE," +
+                    "IncomeOrOutgo INTEGER NOT NULL)";
+            db.execSQL(sqlDB);
+
+
+            // Loads data from database.
+            ArrayList<Registration> registrations = new ArrayList<Registration>();
+            Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+
+            if (cursor.moveToFirst())
             {
-                int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                String title = cursor.getString(cursor.getColumnIndex("Title"));
-                String value = cursor.getString(cursor.getColumnIndex("Value"));
-                String date = cursor.getString(cursor.getColumnIndex("Date"));
-                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+                do
+                {
+                    int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                    String title = cursor.getString(cursor.getColumnIndex("Title"));
+                    String value = cursor.getString(cursor.getColumnIndex("Value"));
+                    String date = cursor.getString(cursor.getColumnIndex("Date"));
+                    int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
 
-                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
 
-            } while (cursor.moveToNext());
-        }
+                } while (cursor.moveToNext());
+            }
 
-        File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
-        if (!root.exists())
-        {
-            root.mkdirs(); // this will create folder.
-        }
-        File filepath = new File(root, FILENAME);  // file path to save
-        FileWriter writer = new FileWriter(filepath);
+            File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
+            if (!root.exists())
+            {
+                root.mkdirs(); // this will create folder.
+            }
+            File filepath = new File(root, FILENAME);  // file path to save
+            FileWriter writer = new FileWriter(filepath);
 
             //PrintWriter writer = new PrintWriter(file);
             for (Registration x : registrations)
@@ -755,127 +789,141 @@ public class MainActivity extends AppCompatActivity
             writer.close();
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(resources.getString(R.string.information));
-            String message = resources.getString(R.string.info_about_saving_1) + filepath.getPath().toString() +
-                    resources.getString(R.string.info_about_saving_1);
-
-            builder.setMessage(message);
-
-            AlertDialog dialog = builder.create();
-            dialog.show();
-
-    }
-
-    public void onClickLoadFile(MenuItem item) throws IOException
-    {
-
-        File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
-        File filepath = new File(root, FILENAME);  // file path to save
-
-        if (!filepath.exists())
-        {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(resources.getString(R.string.information));
-            String message = resources.getString(R.string.info_about_restoring_1) + filepath.getPath().toString() +
-                    resources.getString(R.string.info_about_restoring_2);
+            builder.setTitle(getString(R.string.information));
+            String message = getString(R.string.info_about_saving_1) + filepath.getPath().toString() +
+                    getString(R.string.info_about_saving_1);
 
             builder.setMessage(message);
 
             AlertDialog dialog = builder.create();
             dialog.show();
         }
-        final Scanner scanner = new Scanner(filepath);
-        scanner.useDelimiter("\\n");
 
-        // Clears all data.
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCancelable(false);
-        builder.setTitle(resources.getString(R.string.warning));
-        builder.setMessage(resources.getString(R.string.info_clear_all_question));
-        builder.setPositiveButton(resources.getString(R.string.yes), new DialogInterface.OnClickListener()
+
+    }
+
+    public void onClickLoadFile(MenuItem item) throws IOException
+    {
+
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
         {
-            @Override
-            public void onClick(DialogInterface dialog, int which)
+            shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
+        } else
+        {
+            File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
+            File filepath = new File(root, FILENAME);  // file path to save
+
+            if (!filepath.exists())
             {
-                deleteDatabase("Wallet");
-                textViewBalance.setText("0");
-                textViewIncome.setText("0");
-                textViewOutgo.setText("0");
-                sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle(getString(R.string.information));
+                String message = getString(R.string.info_about_restoring_1) + filepath.getPath().toString() +
+                        getString(R.string.info_about_restoring_2);
 
+                builder.setMessage(message);
 
-                ArrayList<Registration> registrations = new ArrayList<Registration>();
+                AlertDialog dialog = builder.create();
+                dialog.show();
+            }
+            final Scanner scanner = new Scanner(filepath);
+            scanner.useDelimiter("\\n");
 
-                while (scanner.hasNextLine())
+            // Clears all data.
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setCancelable(false);
+            builder.setTitle(getString(R.string.warning));
+            builder.setMessage(getString(R.string.info_clear_all_question));
+            builder.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener()
+            {
+                @Override
+                public void onClick(DialogInterface dialog, int which)
                 {
-                    int id, incomeOrOutgo;
-                    String title, value, date;
-                    id=Integer.parseInt(scanner.nextLine());
-                    title = scanner.nextLine();
-                    value = scanner.nextLine();
-                    date = scanner.nextLine();
-                    incomeOrOutgo = Integer.parseInt(scanner.nextLine());
-
-                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo ));
-                }
+                    deleteDatabase("Wallet");
+                    textViewBalance.setText("0");
+                    textViewIncome.setText("0");
+                    textViewOutgo.setText("0");
+                    sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
 
-                // Sets main information and proper rows.
+                    ArrayList<Registration> registrations = new ArrayList<Registration>();
 
-                Double balance = 0.0, income = 0.0, outgo = 0.0;
-                for (Registration x : registrations)
-                {
-                    addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
-                    addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
-                    if (x.incomeOrOutgo == 0)
-                        outgo -= Double.parseDouble(x.value);
-                    else
-                        income += Double.parseDouble(x.value);
+                    while (scanner.hasNextLine())
+                    {
+                        int id, incomeOrOutgo;
+                        String title, value, date;
+                        id = Integer.parseInt(scanner.nextLine());
+                        title = scanner.nextLine();
+                        value = scanner.nextLine();
+                        date = scanner.nextLine();
+                        incomeOrOutgo = Integer.parseInt(scanner.nextLine());
+
+                        registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                    }
+
+
+                    // Sets main information and proper rows.
+
+                    Double balance = 0.0, income = 0.0, outgo = 0.0;
+                    for (Registration x : registrations)
+                    {
+                        addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                        addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
+                        if (x.incomeOrOutgo == 0)
+                            outgo -= Double.parseDouble(x.value);
+                        else
+                            income += Double.parseDouble(x.value);
 
                         balance += Double.parseDouble(x.value);
 
+                    }
+                    textViewBalance.setText(Double.toString(balance));
+                    textViewIncome.setText(Double.toString(income));
+                    textViewOutgo.setText(Double.toString(outgo));
+
+                    Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
                 }
-                textViewBalance.setText(Double.toString(balance));
-                textViewIncome.setText(Double.toString(income));
-                textViewOutgo.setText(Double.toString(outgo));
-
-                Toast.makeText(getBaseContext(), resources.getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton(resources.getString(R.string.no), new DialogInterface.OnClickListener()
-        {
-            @Override
-            public void onClick(DialogInterface dialog, int which)
+            });
+            builder.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener()
             {
-                Toast.makeText(getBaseContext(), resources.getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
-            }
-        });
+                @Override
+                public void onClick(DialogInterface dialog, int which)
+                {
+                    Toast.makeText(getBaseContext(), getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
+                }
+            });
 
-        AlertDialog dialog = builder.create();
-        dialog.show();
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+
     }
 
     public void onClickChangeLanguage(MenuItem item)
     {
         AlertDialog.Builder builderSingle = new AlertDialog.Builder(this);
         builderSingle.setIcon(R.drawable.filter);
-        builderSingle.setTitle(resources.getString(R.string.select_language));
+        builderSingle.setTitle(getString(R.string.select_language));
 
-        final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.select_dialog_singlechoice);
+        final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
         arrayAdapter.add("English");
         arrayAdapter.add("Polski");
 
 
-        builderSingle.setNegativeButton(resources.getString(R.string.cancel), new DialogInterface.OnClickListener() {
+        builderSingle.setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener()
+        {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
+            public void onClick(DialogInterface dialog, int which)
+            {
                 dialog.dismiss();
             }
         });
 
-        builderSingle.setAdapter(arrayAdapter, new DialogInterface.OnClickListener() {
+        builderSingle.setAdapter(arrayAdapter, new DialogInterface.OnClickListener()
+        {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
+            public void onClick(DialogInterface dialog, int which)
+            {
                 String strName = arrayAdapter.getItem(which);
 
                 if (strName.equals("English"))
@@ -883,19 +931,20 @@ public class MainActivity extends AppCompatActivity
                 else if (strName.equals("Polski"))
                     selectedLanguage = "pl";
 
-                context = LocaleHelper.setLocale(MainActivity.this, selectedLanguage);
-                resources = context.getResources();
+                Locale locale = new Locale(selectedLanguage);
+                Locale.setDefault(locale);
+                Configuration config = new Configuration();
+                config.locale = locale;
+                getBaseContext().getResources().updateConfiguration(config,
+                        getBaseContext().getResources().getDisplayMetrics());
+                settings.edit().putString("locale", selectedLanguage).commit();
+                finish();
+                Intent refresh = new Intent(getBaseContext(), MainActivity.class);
+                startActivity(refresh);
 
-                Intent i = getBaseContext().getPackageManager()
-                        .getLaunchIntentForPackage( getBaseContext().getPackageName() );
-                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(i);
             }
         });
         builderSingle.show();
-
-
-
 
     }
 
