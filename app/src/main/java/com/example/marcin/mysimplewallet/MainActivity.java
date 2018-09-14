@@ -11,7 +11,9 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -30,22 +32,58 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.auth.IdpResponse;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.storage.FileDownloadTask;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Scanner;
 
 
 public class MainActivity extends AppCompatActivity
 {
+
+
+    private static final int REQUEST_CODE_WYDATEK = 0;
+    private static final int REQUEST_CODE_PRZYCHOD = 1;
+    private static final int REQUEST_CODE_EDIT = 2;
+    private static final int RC_SIGN_IN = 3;
+    private static final int WRITE_EXTERNAL_STORAGE = 4;
+    private static final int READ_EXTERNAL_STORAGE = 5;
+    private static final SimpleDateFormat SDF = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    private static final File BACKUP_FOLDER = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
+    private static final String FILENAME = "/backupMySimpleWallet";
+    private static final File BACKUP_FILEPATH = new File(BACKUP_FOLDER, FILENAME);
+
+
     private SQLiteDatabase db;
     private TextView textViewBalance, textViewIncome, textViewOutgo;
     private SharedPreferences settings;
     private String selectedLanguage = "-";
-
+    private StorageReference mStorageRef;
+    private StorageReference riversRef;
+    private UploadTask uploadTask;
+    private Uri file;
+    private FirebaseUser currentFirebaseUser;
+    private File downloadedFile = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -54,7 +92,7 @@ public class MainActivity extends AppCompatActivity
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
-        selectedLanguage = settings.getString("locale", "-");
+        selectedLanguage = settings.getString("language", "-");
         if (!selectedLanguage.equals("-"))
         {
             Locale locale = new Locale(selectedLanguage);
@@ -63,27 +101,56 @@ public class MainActivity extends AppCompatActivity
             config.locale = locale;
             getBaseContext().getResources().updateConfiguration(config,
                     getBaseContext().getResources().getDisplayMetrics());
-            settings.edit().putString("locale", selectedLanguage).apply();
+            settings.edit().putString("language", selectedLanguage).apply();
 
         }
 
-
         setContentView(R.layout.activity_main);
 
+        // Ask for permissions.
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        {
+            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
+        } else
+        {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            {
+                shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
+            } else
+            {
+                // Creates backup folder.
+                if (!BACKUP_FOLDER.exists())
+                    BACKUP_FOLDER.mkdirs(); // this will create folder.
 
-        // Creates backup folder.
-        File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
-        if (!root.exists())
-            root.mkdirs(); // this will create folder.
+                currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
 
-        textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
-        textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
-        textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
+                if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
+                    askForLogin();
 
 
-        addHeaderRow();
-        sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
+                textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
+                textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
+
+
+                addHeaderRow();
+
+                sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
+                try
+                {
+                    if (currentFirebaseUser != null)
+                        loadDataFromServer();
+                }
+                catch ( ParseException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
 
     }
 
@@ -94,7 +161,7 @@ public class MainActivity extends AppCompatActivity
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
-        selectedLanguage = settings.getString("locale", "-");
+        selectedLanguage = settings.getString("language", "-");
 
         if (!selectedLanguage.equals("-"))
         {
@@ -105,16 +172,124 @@ public class MainActivity extends AppCompatActivity
             config.locale = locale;
             getBaseContext().getResources().updateConfiguration(config,
                     getBaseContext().getResources().getDisplayMetrics());
-            settings.edit().putString("locale", selectedLanguage).apply();
+            settings.edit().putString("language", selectedLanguage).apply();
 
         }
 
 
     }
 
-    private static final int REQUEST_CODE_WYDATEK = 0;
-    private static final int REQUEST_CODE_PRZYCHOD = 1;
-    private static final int REQUEST_CODE_EDIT = 2;
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        if (currentFirebaseUser != null)
+        {
+            /*// Creates database if not exists.
+            db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+            String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                    "Title VARCHAR," +
+                    "Value DOUBLE NOT NULL, " +
+                    "Date DATE," +
+                    "IncomeOrOutgo INTEGER NOT NULL)";
+            db.execSQL(sqlDB);
+
+
+            // Loads data from database.
+            ArrayList<Registration> registrations = new ArrayList<Registration>();
+            Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+
+            if (cursor.moveToFirst())
+            {
+                do
+                {
+                    int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                    String title = cursor.getString(cursor.getColumnIndex("Title"));
+                    String value = cursor.getString(cursor.getColumnIndex("Value"));
+                    String date = cursor.getString(cursor.getColumnIndex("Date"));
+                    int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+
+                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+
+                } while (cursor.moveToNext());
+            }
+
+            // Creates backup file on the device.
+            try
+            {
+                FileWriter writer = new FileWriter(BACKUP_FILEPATH);
+
+                // First line is last modified time.
+                DateFormat dateFormat = SDF;
+                Date date = new Date();
+                writer.write(dateFormat.format(date) + "\n"); //2016/11/16 12:08:43
+
+                for (Registration x : registrations)
+                    writer.write(x.id + "\n" + x.title + "\n" + x.value + "\n" + x.date + "\n" + x.incomeOrOutgo + "\n");
+
+                writer.flush();
+                writer.close();
+            } catch (IOException e)
+            {
+                e.printStackTrace();
+            }*/
+
+            // Send backup file on server.
+            mStorageRef = FirebaseStorage.getInstance().getReference();
+            file = Uri.fromFile(BACKUP_FILEPATH);
+            riversRef = mStorageRef.child(currentFirebaseUser.getUid() + "/" + file.getLastPathSegment());
+            uploadTask = riversRef.putFile(file);
+
+
+            // Register observers to listen for when the download is done or if it fails
+            uploadTask.addOnFailureListener(new OnFailureListener()
+            {
+                @Override
+                public void onFailure(@NonNull Exception exception)
+                {
+                    // Handle unsuccessful uploads
+                    exception.printStackTrace();
+
+                }
+            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>()
+            {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot)
+                {
+                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
+                    // ...
+                }
+            });
+
+            // Deletes temp file.
+            downloadedFile.delete();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults)
+    {
+
+        if (requestCode == READ_EXTERNAL_STORAGE || requestCode == WRITE_EXTERNAL_STORAGE)
+        {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            {
+                finish();
+                Intent refresh = new Intent(getBaseContext(), MainActivity.class);
+                startActivity(refresh);
+            } else
+            {
+                Toast.makeText(this, "Nie przyznano wymaganych uprawnień..", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        } else
+        {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+
+    }
 
     public void onClickOutgo(View view)
     {
@@ -123,7 +298,6 @@ public class MainActivity extends AppCompatActivity
         // 1 - income
         i.putExtra("IncomeOrOutgo", 0);
         i.putExtra("edit?", "false");
-        Log.d("pies",selectedLanguage + "outgo");
         i.putExtra("language", selectedLanguage);
         startActivityForResult(i, REQUEST_CODE_WYDATEK);
 
@@ -141,9 +315,41 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent Data)
     {
+
+        // Login activity.
+        if (requestCode == RC_SIGN_IN)
+        {
+            IdpResponse response = IdpResponse.fromResultIntent(Data);
+
+            if (resultCode == RESULT_OK)
+            {
+                currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+                Toast.makeText(getBaseContext(), "Zalogowano", Toast.LENGTH_SHORT).show();
+                try
+                {
+                    loadDataFromServer();
+                }
+                catch ( ParseException e)
+                {
+                    e.printStackTrace();
+                }
+            } else
+            {
+                // Sign in failed. If response is null the user canceled the
+                // sign-in flow using the back button. Otherwise check
+                // response.getError().getErrorCode() and handle the error.
+                // ...
+                Toast.makeText(getBaseContext(), "Logowanie nie powiodło się", Toast.LENGTH_SHORT).show();
+
+            }
+        }
+
+
+        // Add outgo and income activities.
         String title = null;
         String value = null;
         String date = null;
@@ -164,6 +370,14 @@ public class MainActivity extends AppCompatActivity
             {
                 addNewRow(title, value, date, 0);
                 addToDatabase(title, value, date, 0);
+                try
+                {
+                    saveAllDataToFile(); // Updates backup file.
+                }
+                catch (IOException e )
+                {
+                    e.printStackTrace();
+                }
 
                 TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
                 double valueD = Double.parseDouble(balance.getText().toString());
@@ -181,6 +395,14 @@ public class MainActivity extends AppCompatActivity
 
                 addNewRow(title, value, date, 1);
                 addToDatabase(title, value, date, 1);
+                try
+                {
+                    saveAllDataToFile(); // Updates backup file.
+                }
+                catch (IOException e )
+                {
+                    e.printStackTrace();
+                }
 
                 TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
                 double valueD = Double.parseDouble(balance.getText().toString());
@@ -212,6 +434,15 @@ public class MainActivity extends AppCompatActivity
                             " AND Date = '" + oldData + "'";
 
                     db.execSQL(sqlQuery);
+
+                    try
+                    {
+                        saveAllDataToFile(); // Updates backup file.
+                    }
+                    catch (IOException e )
+                    {
+                        e.printStackTrace();
+                    }
 
                     // Updates main information.
                     Double oldBalance = Double.parseDouble(textViewBalance.getText().toString());
@@ -398,10 +629,10 @@ public class MainActivity extends AppCompatActivity
         for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo)
+                ((ViewGroup) child).removeAllViews();
         }
 
-        addHeaderRow();
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
@@ -451,10 +682,10 @@ public class MainActivity extends AppCompatActivity
         for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo)
+                ((ViewGroup) child).removeAllViews();
         }
 
-        addHeaderRow();
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
@@ -506,10 +737,10 @@ public class MainActivity extends AppCompatActivity
         for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo)
+                ((ViewGroup) child).removeAllViews();
         }
 
-        addHeaderRow();
         for (Registration x : registrations)
             addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
     }
@@ -525,7 +756,7 @@ public class MainActivity extends AppCompatActivity
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setCancelable(false);
         builder.setTitle(getString(R.string.info_clear_all_question));
-        builder.setPositiveButton("TAK", new DialogInterface.OnClickListener()
+        builder.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener()
         {
             @Override
             public void onClick(DialogInterface dialog, int which)
@@ -596,9 +827,9 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
-
     @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo
+            menuInfo)
     {
         super.onCreateContextMenu(menu, v, menuInfo);
         MenuInflater inflater = getMenuInflater();
@@ -657,7 +888,6 @@ public class MainActivity extends AppCompatActivity
                         "WHERE Title = '" + title + "'" +
                         " AND Value = " + value +
                         " AND Date = '" + date + "'";
-                Log.d("pies", sqlQuery);
                 db.execSQL(sqlQuery);
                 tableLayout.removeView(tableRow);
                 Toast.makeText(this, getString(R.string.info_registration_deleted), Toast.LENGTH_SHORT).show();
@@ -706,10 +936,11 @@ public class MainActivity extends AppCompatActivity
         // Clears all table's rows.
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         int count = tableLayout.getChildCount();
-        for (int i = 1; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRowWithContextMenuInfo) ((ViewGroup) child).removeAllViews();
+            if (child instanceof TableRowWithContextMenuInfo)
+                ((ViewGroup) child).removeAllViews();
         }
 
         Double balance = 0.0, income = 0.0, outgo = 0.0;
@@ -733,68 +964,90 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    private static final String FILENAME = "/backupMySimpleWallet";
-    private static final int WRITE_EXTERNAL_STORAGE = 1;
-    private static final int READ_EXTERNAL_STORAGE = 1;
-
-    public void onClickSaveFile(MenuItem item) throws IOException
+    public void saveAllDataToFile() throws IOException
     {
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        // Creates database if not exists.
+        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                "Title VARCHAR," +
+                "Value DOUBLE NOT NULL, " +
+                "Date DATE," +
+                "IncomeOrOutgo INTEGER NOT NULL)";
+        db.execSQL(sqlDB);
+
+
+        // Loads data from database.
+        ArrayList<Registration> registrations = new ArrayList<Registration>();
+        Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
+
+        if (cursor.moveToFirst())
         {
-            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
+            do
+            {
+                int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                String title = cursor.getString(cursor.getColumnIndex("Title"));
+                String value = cursor.getString(cursor.getColumnIndex("Value"));
+                String date = cursor.getString(cursor.getColumnIndex("Date"));
+                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
+
+                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+
+            } while (cursor.moveToNext());
         }
 
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+        // First line is last modified time.
+        FileWriter writer = new FileWriter(BACKUP_FILEPATH);
+        DateFormat dateFormat = SDF;
+        Date date = new Date();
+        writer.write(dateFormat.format(date) + "\n"); //2016/11/16 12:08:43
+
+        // Rest of lines = data.
+        for (Registration x : registrations)
+            writer.write(x.id + "\n" + x.title + "\n" + x.value + "\n" + x.date + "\n" + x.incomeOrOutgo + "\n");
+
+        writer.flush();
+        writer.close();
+    }
+
+    // TODO: NIEPOTRZEBNE, coś pomyślimy
+    public void onClickSaveFile(MenuItem item) throws IOException
+    {
+        saveAllDataToFile();
+
+        String message = getString(R.string.info_about_saving_1) + BACKUP_FILEPATH.getPath().toString() +
+                getString(R.string.info_about_saving_2) + "\n\n";
+
+        TextView showText = new TextView(this);
+        showText.setGravity(Gravity.CENTER);
+        showText.setTextSize(15);
+        showText.setTextColor(Color.BLACK);
+        showText.setText(message);
+        showText.setTextIsSelectable(true);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.information));
+        builder.setView(showText);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+
+    }
+
+    public void onClickLoadFile(MenuItem item)
+    {
+
+        final Scanner scanner;
+        try
         {
-            // Creates database if not exists.
-            db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-            String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                    "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                    "Title VARCHAR," +
-                    "Value DOUBLE NOT NULL, " +
-                    "Date DATE," +
-                    "IncomeOrOutgo INTEGER NOT NULL)";
-            db.execSQL(sqlDB);
+            scanner = new Scanner(BACKUP_FILEPATH);
+            scanner.useDelimiter("\\n");
+        } catch (FileNotFoundException e)
+        {
 
-
-            // Loads data from database.
-            ArrayList<Registration> registrations = new ArrayList<Registration>();
-            Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-            if (cursor.moveToFirst())
-            {
-                do
-                {
-                    int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                    String title = cursor.getString(cursor.getColumnIndex("Title"));
-                    String value = cursor.getString(cursor.getColumnIndex("Value"));
-                    String date = cursor.getString(cursor.getColumnIndex("Date"));
-                    int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-
-                } while (cursor.moveToNext());
-            }
-
-            File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
-            if (!root.exists())
-            {
-                root.mkdirs(); // this will create folder.
-            }
-            File filepath = new File(root, FILENAME);  // file path to save
-            FileWriter writer = new FileWriter(filepath);
-
-            //PrintWriter writer = new PrintWriter(file);
-            for (Registration x : registrations)
-                writer.write(x.id + "\n" + x.title + "\n" + x.value + "\n" + x.date + "\n" + x.incomeOrOutgo + "\n");
-
-            writer.flush();
-            writer.close();
-
-
-            String message = getString(R.string.info_about_saving_1) + filepath.getPath().toString() +
-                    getString(R.string.info_about_saving_2) + "\n\n";
+            String message = getString(R.string.info_about_restoring_1) + BACKUP_FILEPATH.getPath().toString() +
+                    getString(R.string.info_about_restoring_2) + "\n\n";
 
             TextView showText = new TextView(this);
             showText.setGravity(Gravity.CENTER);
@@ -809,128 +1062,82 @@ public class MainActivity extends AppCompatActivity
 
             AlertDialog dialog = builder.create();
             dialog.show();
+            return;
         }
 
-
-    }
-
-    public void onClickLoadFile(MenuItem item) throws IOException
-    {
-
-        File root = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
-        if (!root.exists())
+        // Clears all data.
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+        builder.setTitle(getString(R.string.warning));
+        builder.setMessage(getString(R.string.info_clear_all_question));
+        builder.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener()
         {
-            root.mkdirs(); // this will create folder.
-        }
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-        {
-            shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
-            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
-        }
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-        {
-            final Scanner scanner;
-            File filepath = new File(root, FILENAME);  // file path to save
-            try
+            @Override
+            public void onClick(DialogInterface dialog, int which)
             {
-                scanner = new Scanner(filepath);
-                scanner.useDelimiter("\\n");
-            } catch (FileNotFoundException e)
-            {
+                deleteDatabase("Wallet");
+                textViewBalance.setText("0");
+                textViewIncome.setText("0");
+                textViewOutgo.setText("0");
+                sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
-                String message = getString(R.string.info_about_restoring_1) + filepath.getPath().toString() +
-                        getString(R.string.info_about_restoring_2) + "\n\n";
 
-                TextView showText = new TextView(this);
-                showText.setGravity(Gravity.CENTER);
-                showText.setTextSize(15);
-                showText.setTextColor(Color.BLACK);
-                showText.setText(message);
-                showText.setTextIsSelectable(true);
+                ArrayList<Registration> registrations = new ArrayList<Registration>();
+                scanner.nextLine(); // skip line with last modified time
+                while (scanner.hasNextLine())
+                {
+                    int id, incomeOrOutgo;
+                    String title, value, date;
 
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle(getString(R.string.information));
-                builder.setView(showText);
+                    id = Integer.parseInt(scanner.nextLine());
+                    title = scanner.nextLine();
+                    value = scanner.nextLine();
+                    date = scanner.nextLine();
+                    incomeOrOutgo = Integer.parseInt(scanner.nextLine());
 
-                AlertDialog dialog = builder.create();
-                dialog.show();
-                return;
+                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                }
+
+
+                // Sets main information and proper rows.
+
+                Double balance = 0.0, income = 0.0, outgo = 0.0;
+                for (Registration x : registrations)
+                {
+                    addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                    addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
+                    if (x.incomeOrOutgo == 0)
+                        outgo -= Double.parseDouble(x.value);
+                    else
+                        income += Double.parseDouble(x.value);
+
+                    balance += Double.parseDouble(x.value);
+                }
+                textViewBalance.setText(Double.toString(balance));
+                textViewIncome.setText(Double.toString(income));
+                textViewOutgo.setText(Double.toString(outgo));
+
+                Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
             }
-
-            // Clears all data.
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setCancelable(false);
-            builder.setTitle(getString(R.string.warning));
-            builder.setMessage(getString(R.string.info_clear_all_question));
-            builder.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener()
+        });
+        builder.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
             {
-                @Override
-                public void onClick(DialogInterface dialog, int which)
-                {
-                    deleteDatabase("Wallet");
-                    textViewBalance.setText("0");
-                    textViewIncome.setText("0");
-                    textViewOutgo.setText("0");
-                    sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                Toast.makeText(getBaseContext(), getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
+            }
+        });
 
+        AlertDialog dialog = builder.create();
+        dialog.show();
 
-                    ArrayList<Registration> registrations = new ArrayList<Registration>();
-
-                    while (scanner.hasNextLine())
-                    {
-                        int id, incomeOrOutgo;
-                        String title, value, date;
-                        id = Integer.parseInt(scanner.nextLine());
-                        title = scanner.nextLine();
-                        value = scanner.nextLine();
-                        date = scanner.nextLine();
-                        incomeOrOutgo = Integer.parseInt(scanner.nextLine());
-
-                        registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-                    }
-
-
-                    // Sets main information and proper rows.
-
-                    Double balance = 0.0, income = 0.0, outgo = 0.0;
-                    for (Registration x : registrations)
-                    {
-                        addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
-                        addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
-                        if (x.incomeOrOutgo == 0)
-                            outgo -= Double.parseDouble(x.value);
-                        else
-                            income += Double.parseDouble(x.value);
-
-                        balance += Double.parseDouble(x.value);
-
-                    }
-                    textViewBalance.setText(Double.toString(balance));
-                    textViewIncome.setText(Double.toString(income));
-                    textViewOutgo.setText(Double.toString(outgo));
-
-                    Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
-                }
-            });
-            builder.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener()
-            {
-                @Override
-                public void onClick(DialogInterface dialog, int which)
-                {
-                    Toast.makeText(getBaseContext(), getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
-                }
-            });
-
-            AlertDialog dialog = builder.create();
-            dialog.show();
-        }
 
     }
 
     public void onClickChangeLanguage(MenuItem item)
     {
         AlertDialog.Builder builderSingle = new AlertDialog.Builder(this);
-        builderSingle.setIcon(R.drawable.filter);
         builderSingle.setTitle(getString(R.string.select_language));
 
         final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
@@ -966,7 +1173,7 @@ public class MainActivity extends AppCompatActivity
                 config.locale = locale;
                 getBaseContext().getResources().updateConfiguration(config,
                         getBaseContext().getResources().getDisplayMetrics());
-                settings.edit().putString("locale", selectedLanguage).commit();
+                settings.edit().putString("language", selectedLanguage).commit();
 
                 finish();
                 Intent refresh = new Intent(getBaseContext(), MainActivity.class);
@@ -978,4 +1185,154 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    public void onClickAskForLogin(MenuItem item)
+    {
+        askForLogin();
+    }
+
+    public void askForLogin()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Czy chciałbyś się zalogować?");
+        builder.setMessage("Możesz zalogować się na swoje konto Google i przechowywać dane w chmurze" +
+                " lub trzymać dane tylko lokalnie na urządzniu.\n" +
+                "Pamiętaj, możesz stworzyć plik z kopią zapasową i wgrać go na inne urządzenie, bez konieczności logowania.");
+        builder.setPositiveButton("Połącz z kontem Google", new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                // Choose authentication providers
+                List<AuthUI.IdpConfig> providers = Arrays.asList(
+                        new AuthUI.IdpConfig.GoogleBuilder().build());
+
+                // Create and launch sign-in intent
+                startActivityForResult(AuthUI.getInstance()
+                                .createSignInIntentBuilder()
+                                .setAvailableProviders(providers)
+                                .build(),
+                        RC_SIGN_IN);
+
+            }
+        });
+        builder.setNegativeButton("Pomiń", new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                Toast.makeText(getBaseContext(), "Opcja połączenia z kontem dostepna w ustawieniach. ", Toast.LENGTH_LONG).show();
+                settings.edit().putString("askForLogin", "no").apply();
+                return;
+            }
+        });
+
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+
+    }
+
+    public void loadDataFromServer() throws ParseException
+    {
+        final File localFile = new File(Environment.getExternalStorageDirectory().toString() +"/MySimpleWalletBackup" + FILENAME);
+
+        // Load data from server.
+        mStorageRef = FirebaseStorage.getInstance().getReference();
+        riversRef = mStorageRef.child(currentFirebaseUser.getUid() + FILENAME);
+        try
+        {
+            downloadedFile = File.createTempFile("tempFromServer", null, BACKUP_FOLDER);
+
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        riversRef.getFile(downloadedFile)
+                .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>()
+                {
+                    @Override
+                    public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot)
+                    {
+                        Scanner scanner = null;
+                        try
+                        {
+                            scanner = new Scanner(downloadedFile);
+                            scanner.useDelimiter("\\n");
+                        } catch (FileNotFoundException e)
+                        {
+                            e.printStackTrace();
+                        }
+
+                        ArrayList<Registration> registrations = new ArrayList<Registration>();
+                        String dateS =  scanner.nextLine();
+                        Date dateLocalFile = null;
+                        Date dateServerFile = null;
+                        try
+                        {
+                            dateLocalFile = SDF.parse(SDF.format(localFile.lastModified()));
+                            dateServerFile = SDF.parse(dateS);
+                        }
+                        catch (ParseException e)
+                        {
+                            e.printStackTrace();
+                        }
+
+                        // If local backup is newer than backup on the server, use local backup, else use server backup.
+                        if (dateLocalFile.before(dateServerFile))
+                        {
+                            // Clears all data.
+                            deleteDatabase("Wallet");
+                            textViewBalance.setText("0");
+                            textViewIncome.setText("0");
+                            textViewOutgo.setText("0");
+                            sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
+                            while (scanner.hasNextLine())
+                            {
+                                int id, incomeOrOutgo;
+                                String title, value, date;
+                                id = Integer.parseInt(scanner.nextLine());
+                                title = scanner.nextLine();
+                                value = scanner.nextLine();
+                                date = scanner.nextLine();
+                                incomeOrOutgo = Integer.parseInt(scanner.nextLine());
+
+                                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                            }
+
+                            // Sets main information and proper rows.
+                            Double balance = 0.0, income = 0.0, outgo = 0.0;
+                            for (Registration x : registrations)
+                            {
+                                addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                                addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
+                                if (x.incomeOrOutgo == 0)
+                                    outgo -= Double.parseDouble(x.value);
+                                else
+                                    income += Double.parseDouble(x.value);
+
+                                balance += Double.parseDouble(x.value);
+
+                            }
+                            textViewBalance.setText(Double.toString(balance));
+                            textViewIncome.setText(Double.toString(income));
+                            textViewOutgo.setText(Double.toString(outgo));
+
+                            Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
+                        }
+                        else
+                            sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener()
+                {
+                    @Override
+                    public void onFailure(@NonNull Exception exception)
+                    {
+                        // Probably no needed.
+                    }
+                });
+
+    }
 }

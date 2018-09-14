@@ -48,4 +48,5 @@
     <string name="save_backup">Zapisz plik kopii zapasowej</string>
     <string name="change_language">Zmień język</string>
     <string name="select_language">Wybierz język</string>
+    <string name="connect_to_google">Połącz z kontem Google</string>
 </resources>
