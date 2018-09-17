@@ -38,7 +38,7 @@
     <string name="choose_range">Wybierz zakres</string>
     <string name="from">Od</string>
     <string name="to">Do</string>
-    <string name="remove_filter">USUŃ FILTR</string>
+    <string name="remove_filter">USUŃ\nFILTR</string>
     <string name="CANCEL">ANULUJ</string>
     <string name="delete">Usuń</string>
     <string name="edit">Edytuj</string>
@@ -49,4 +49,5 @@
     <string name="change_language">Zmień język</string>
     <string name="select_language">Wybierz język</string>
     <string name="connect_to_google">Połącz z kontem Google</string>
+    <string name="refresh">Odśwież</string>
 </resources>

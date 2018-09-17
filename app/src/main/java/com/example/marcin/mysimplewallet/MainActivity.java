@@ -107,6 +107,10 @@ public class MainActivity extends AppCompatActivity
 
         setContentView(R.layout.activity_main);
 
+        textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
+        textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
+        textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
+
         // Ask for permissions.
         if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
         {
@@ -126,14 +130,16 @@ public class MainActivity extends AppCompatActivity
 
                 currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
+                try
+                {
+                    downloadedFile = File.createTempFile("tempFromServer", null, BACKUP_FOLDER);
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
 
                 if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
-                    askForLogin();
-
-
-                textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
-                textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
-                textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
+                    onClickAskForLogin(null);
 
 
                 addHeaderRow();
@@ -143,9 +149,11 @@ public class MainActivity extends AppCompatActivity
                 try
                 {
                     if (currentFirebaseUser != null)
+                    {
                         loadDataFromServer();
-                }
-                catch ( ParseException e)
+                    }
+
+                } catch (ParseException e)
                 {
                     e.printStackTrace();
                 }
@@ -176,6 +184,7 @@ public class MainActivity extends AppCompatActivity
 
         }
 
+        //onClickRefresh(null);
 
     }
 
@@ -183,88 +192,6 @@ public class MainActivity extends AppCompatActivity
     protected void onPause()
     {
         super.onPause();
-        if (currentFirebaseUser != null)
-        {
-            /*// Creates database if not exists.
-            db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-            String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                    "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
-                    "Title VARCHAR," +
-                    "Value DOUBLE NOT NULL, " +
-                    "Date DATE," +
-                    "IncomeOrOutgo INTEGER NOT NULL)";
-            db.execSQL(sqlDB);
-
-
-            // Loads data from database.
-            ArrayList<Registration> registrations = new ArrayList<Registration>();
-            Cursor cursor = db.rawQuery("SELECT * FROM IncomeOutgo", null);
-
-            if (cursor.moveToFirst())
-            {
-                do
-                {
-                    int id = cursor.getInt(cursor.getColumnIndex("Id"));
-                    String title = cursor.getString(cursor.getColumnIndex("Title"));
-                    String value = cursor.getString(cursor.getColumnIndex("Value"));
-                    String date = cursor.getString(cursor.getColumnIndex("Date"));
-                    int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-
-                } while (cursor.moveToNext());
-            }
-
-            // Creates backup file on the device.
-            try
-            {
-                FileWriter writer = new FileWriter(BACKUP_FILEPATH);
-
-                // First line is last modified time.
-                DateFormat dateFormat = SDF;
-                Date date = new Date();
-                writer.write(dateFormat.format(date) + "\n"); //2016/11/16 12:08:43
-
-                for (Registration x : registrations)
-                    writer.write(x.id + "\n" + x.title + "\n" + x.value + "\n" + x.date + "\n" + x.incomeOrOutgo + "\n");
-
-                writer.flush();
-                writer.close();
-            } catch (IOException e)
-            {
-                e.printStackTrace();
-            }*/
-
-            // Send backup file on server.
-            mStorageRef = FirebaseStorage.getInstance().getReference();
-            file = Uri.fromFile(BACKUP_FILEPATH);
-            riversRef = mStorageRef.child(currentFirebaseUser.getUid() + "/" + file.getLastPathSegment());
-            uploadTask = riversRef.putFile(file);
-
-
-            // Register observers to listen for when the download is done or if it fails
-            uploadTask.addOnFailureListener(new OnFailureListener()
-            {
-                @Override
-                public void onFailure(@NonNull Exception exception)
-                {
-                    // Handle unsuccessful uploads
-                    exception.printStackTrace();
-
-                }
-            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>()
-            {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot)
-                {
-                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
-                    // ...
-                }
-            });
-
-            // Deletes temp file.
-            downloadedFile.delete();
-        }
     }
 
     @Override
@@ -332,8 +259,7 @@ public class MainActivity extends AppCompatActivity
                 try
                 {
                     loadDataFromServer();
-                }
-                catch ( ParseException e)
+                } catch (ParseException e)
                 {
                     e.printStackTrace();
                 }
@@ -370,14 +296,16 @@ public class MainActivity extends AppCompatActivity
             {
                 addNewRow(title, value, date, 0);
                 addToDatabase(title, value, date, 0);
+
                 try
                 {
-                    saveAllDataToFile(); // Updates backup file.
-                }
-                catch (IOException e )
+                    saveAllDataToFile(); // Updates local backup.
+                } catch (IOException e)
                 {
                     e.printStackTrace();
                 }
+                sendLocalFileToServer(); // Updates server backup.
+
 
                 TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
                 double valueD = Double.parseDouble(balance.getText().toString());
@@ -395,14 +323,16 @@ public class MainActivity extends AppCompatActivity
 
                 addNewRow(title, value, date, 1);
                 addToDatabase(title, value, date, 1);
+
                 try
                 {
-                    saveAllDataToFile(); // Updates backup file.
-                }
-                catch (IOException e )
+                    saveAllDataToFile(); // Updates local backup.
+                } catch (IOException e)
                 {
                     e.printStackTrace();
                 }
+                sendLocalFileToServer(); // Updates server backup.
+
 
                 TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
                 double valueD = Double.parseDouble(balance.getText().toString());
@@ -435,14 +365,6 @@ public class MainActivity extends AppCompatActivity
 
                     db.execSQL(sqlQuery);
 
-                    try
-                    {
-                        saveAllDataToFile(); // Updates backup file.
-                    }
-                    catch (IOException e )
-                    {
-                        e.printStackTrace();
-                    }
 
                     // Updates main information.
                     Double oldBalance = Double.parseDouble(textViewBalance.getText().toString());
@@ -876,6 +798,7 @@ public class MainActivity extends AppCompatActivity
                 i.putExtra("value", value);
                 i.putExtra("date", date);
                 i.putExtra("IncomeOrOutgo", Integer.parseInt(incomeOrOutgo));
+                i.putExtra("language", selectedLanguage);
                 startActivityForResult(i, REQUEST_CODE_EDIT);
 
                 return true;
@@ -891,6 +814,15 @@ public class MainActivity extends AppCompatActivity
                 db.execSQL(sqlQuery);
                 tableLayout.removeView(tableRow);
                 Toast.makeText(this, getString(R.string.info_registration_deleted), Toast.LENGTH_SHORT).show();
+
+                try
+                {
+                    saveAllDataToFile(); // Updates local backup.
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+                sendLocalFileToServer(); // Updates server backup.
                 return true;
             }
             default:
@@ -1187,11 +1119,6 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickAskForLogin(MenuItem item)
     {
-        askForLogin();
-    }
-
-    public void askForLogin()
-    {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Czy chciałbyś się zalogować?");
         builder.setMessage("Możesz zalogować się na swoje konto Google i przechowywać dane w chmurze" +
@@ -1235,104 +1162,251 @@ public class MainActivity extends AppCompatActivity
 
     public void loadDataFromServer() throws ParseException
     {
-        final File localFile = new File(Environment.getExternalStorageDirectory().toString() +"/MySimpleWalletBackup" + FILENAME);
+        final File localFile = new File(Environment.getExternalStorageDirectory().toString() + "/MySimpleWalletBackup" + FILENAME);
 
         // Load data from server.
         mStorageRef = FirebaseStorage.getInstance().getReference();
         riversRef = mStorageRef.child(currentFirebaseUser.getUid() + FILENAME);
-        try
-        {
-            downloadedFile = File.createTempFile("tempFromServer", null, BACKUP_FOLDER);
-
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
         riversRef.getFile(downloadedFile)
                 .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>()
                 {
                     @Override
                     public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot)
                     {
-                        Scanner scanner = null;
                         try
                         {
-                            scanner = new Scanner(downloadedFile);
-                            scanner.useDelimiter("\\n");
+                            Scanner localScanner = null;
+                            ArrayList<Registration> registrations = null;
+                            Date dateLocalFile = null;
+                            Date dateServerFile = null;
+
+                            // Get time from server file.
+                            Log.d("pies", "PATH: " + downloadedFile.getAbsolutePath());
+                            Scanner serverScanner = new Scanner(downloadedFile);
+                            serverScanner.useDelimiter("\\n");
+
+
+                            registrations = new ArrayList<Registration>();
+                            registrations = new ArrayList<Registration>();
+                            String serverDateS = serverScanner.nextLine();
+
+                            try
+                            {
+                                dateServerFile = SDF.parse(serverDateS);
+                            } catch (ParseException e)
+                            {
+                                e.printStackTrace();
+                            }
+
+                            Log.d("pies",Long.toString(localFile.length())+"df");
+                            if (localFile.length() != 0)
+                            {
+                                Log.d("pies","ddd");
+
+                                // Get time from local file.
+                                try
+                                {
+                                    localScanner = new Scanner(localFile);
+                                    localScanner.useDelimiter("\\n");
+                                } catch (FileNotFoundException e)
+                                {
+                                    e.printStackTrace();
+                                }
+
+                                registrations = new ArrayList<Registration>();
+                                String localDateS = localScanner.nextLine();
+                                dateLocalFile = null;
+                                try
+                                {
+                                    dateLocalFile = SDF.parse(localDateS);
+                                } catch (ParseException e)
+                                {
+                                    e.printStackTrace();
+                                }
+
+                                // If server backup is newer than local backup, use server backup, else use local backup.
+                                if (dateLocalFile.before(dateServerFile))
+                                {
+                                    Log.d("pies","serwer");
+
+                                    // Clears all data.
+                                    deleteDatabase("Wallet");
+                                    textViewBalance.setText("0");
+                                    textViewIncome.setText("0");
+                                    textViewOutgo.setText("0");
+                                    sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
+                                    while (serverScanner.hasNextLine())
+                                    {
+                                        int id, incomeOrOutgo;
+                                        String title, value, date;
+                                        id = Integer.parseInt(serverScanner.nextLine());
+                                        title = serverScanner.nextLine();
+                                        value = serverScanner.nextLine();
+                                        date = serverScanner.nextLine();
+                                        incomeOrOutgo = Integer.parseInt(serverScanner.nextLine());
+
+                                        registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                                    }
+
+                                    // Sets main information and proper rows.
+                                    Double balance = 0.0, income = 0.0, outgo = 0.0;
+                                    for (Registration x : registrations)
+                                    {
+                                        addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                                        addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
+                                        if (x.incomeOrOutgo == 0)
+                                            outgo -= Double.parseDouble(x.value);
+                                        else
+                                            income += Double.parseDouble(x.value);
+
+                                        balance += Double.parseDouble(x.value);
+
+                                    }
+                                    textViewBalance.setText(Double.toString(balance));
+                                    textViewIncome.setText(Double.toString(income));
+                                    textViewOutgo.setText(Double.toString(outgo));
+
+                                    Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
+
+                                    try
+                                    {
+                                        saveAllDataToFile(); // updates local file
+                                    } catch (IOException e)
+                                    {
+                                        e.printStackTrace();
+                                    }
+                                } else
+                                {
+                                    Log.d("pies","local");
+
+                                    sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                                    sendLocalFileToServer();
+                                }
+                            }
+                            else // If local backup is just created.
+                            {
+                                // Clears all data.
+                                deleteDatabase("Wallet");
+                                textViewBalance.setText("0");
+                                textViewIncome.setText("0");
+                                textViewOutgo.setText("0");
+                                sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
+                                while (serverScanner.hasNextLine())
+                                {
+                                    int id, incomeOrOutgo;
+                                    String title, value, date;
+                                    id = Integer.parseInt(serverScanner.nextLine());
+                                    title = serverScanner.nextLine();
+                                    value = serverScanner.nextLine();
+                                    date = serverScanner.nextLine();
+                                    incomeOrOutgo = Integer.parseInt(serverScanner.nextLine());
+
+                                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                                }
+
+                                // Sets main information and proper rows.
+                                Double balance = 0.0, income = 0.0, outgo = 0.0;
+                                for (Registration x : registrations)
+                                {
+                                    addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                                    addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
+                                    if (x.incomeOrOutgo == 0)
+                                        outgo -= Double.parseDouble(x.value);
+                                    else
+                                        income += Double.parseDouble(x.value);
+
+                                    balance += Double.parseDouble(x.value);
+
+                                }
+                                textViewBalance.setText(Double.toString(balance));
+                                textViewIncome.setText(Double.toString(income));
+                                textViewOutgo.setText(Double.toString(outgo));
+
+                                Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
+
+                                try
+                                {
+                                    saveAllDataToFile(); // updates local file
+                                } catch (IOException e)
+                                {
+                                    e.printStackTrace();
+                                }
+                            }
+
                         } catch (FileNotFoundException e)
                         {
                             e.printStackTrace();
                         }
-
-                        ArrayList<Registration> registrations = new ArrayList<Registration>();
-                        String dateS =  scanner.nextLine();
-                        Date dateLocalFile = null;
-                        Date dateServerFile = null;
-                        try
-                        {
-                            dateLocalFile = SDF.parse(SDF.format(localFile.lastModified()));
-                            dateServerFile = SDF.parse(dateS);
-                        }
-                        catch (ParseException e)
-                        {
-                            e.printStackTrace();
-                        }
-
-                        // If local backup is newer than backup on the server, use local backup, else use server backup.
-                        if (dateLocalFile.before(dateServerFile))
-                        {
-                            // Clears all data.
-                            deleteDatabase("Wallet");
-                            textViewBalance.setText("0");
-                            textViewIncome.setText("0");
-                            textViewOutgo.setText("0");
-                            sendQueryAndShow("SELECT * FROM IncomeOutgo");
-
-                            while (scanner.hasNextLine())
-                            {
-                                int id, incomeOrOutgo;
-                                String title, value, date;
-                                id = Integer.parseInt(scanner.nextLine());
-                                title = scanner.nextLine();
-                                value = scanner.nextLine();
-                                date = scanner.nextLine();
-                                incomeOrOutgo = Integer.parseInt(scanner.nextLine());
-
-                                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-                            }
-
-                            // Sets main information and proper rows.
-                            Double balance = 0.0, income = 0.0, outgo = 0.0;
-                            for (Registration x : registrations)
-                            {
-                                addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
-                                addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
-                                if (x.incomeOrOutgo == 0)
-                                    outgo -= Double.parseDouble(x.value);
-                                else
-                                    income += Double.parseDouble(x.value);
-
-                                balance += Double.parseDouble(x.value);
-
-                            }
-                            textViewBalance.setText(Double.toString(balance));
-                            textViewIncome.setText(Double.toString(income));
-                            textViewOutgo.setText(Double.toString(outgo));
-
-                            Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
-                        }
-                        else
-                            sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                        downloadedFile.delete();
                     }
+
+
                 })
                 .addOnFailureListener(new OnFailureListener()
                 {
                     @Override
                     public void onFailure(@NonNull Exception exception)
                     {
+                        exception.printStackTrace();
                         // Probably no needed.
                     }
                 });
 
     }
+
+    public void onClickRefresh(MenuItem item)
+    {
+        // Checks if exists newer version.
+        sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
+        try
+        {
+            if (currentFirebaseUser != null)
+                loadDataFromServer();
+        } catch (ParseException e)
+        {
+            e.printStackTrace();
+        }
+
+    }
+
+    public void sendLocalFileToServer()
+    {
+        if (currentFirebaseUser != null)
+        {
+            // Send backup file on server.
+            mStorageRef = FirebaseStorage.getInstance().getReference();
+            file = Uri.fromFile(BACKUP_FILEPATH);
+            riversRef = mStorageRef.child(currentFirebaseUser.getUid() + "/" + file.getLastPathSegment());
+            uploadTask = riversRef.putFile(file);
+
+
+            // Register observers to listen for when the download is done or if it fails
+            uploadTask.addOnFailureListener(new OnFailureListener()
+            {
+                @Override
+                public void onFailure(@NonNull Exception exception)
+                {
+                    // Handle unsuccessful uploads
+                    exception.printStackTrace();
+
+                }
+            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>()
+            {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot)
+                {
+                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
+                    // ...
+                }
+            });
+
+            // Deletes temp file.
+            //downloadedFile.delete();
+        }
+
+    }
 }
+
