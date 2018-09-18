@@ -27,11 +27,6 @@
         android:onClick="onClickLoadFile"
         app:showAsAction="never" />
 
-    <item android:id="@+id/saveFile"
-        android:title="@string/save_backup"
-        android:onClick="onClickSaveFile"
-        app:showAsAction="never" />
-
     <item android:id="@+id/changeLanguage"
         android:title="@string/change_language"
         android:onClick="onClickChangeLanguage"

@@ -93,79 +93,37 @@ public class MainActivity extends AppCompatActivity
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
         selectedLanguage = settings.getString("language", "-");
-        if (!selectedLanguage.equals("-"))
-        {
-            Locale locale = new Locale(selectedLanguage);
-            Locale.setDefault(locale);
-            Configuration config = new Configuration();
-            config.locale = locale;
-            getBaseContext().getResources().updateConfiguration(config,
-                    getBaseContext().getResources().getDisplayMetrics());
-            settings.edit().putString("language", selectedLanguage).apply();
-
-        }
 
         setContentView(R.layout.activity_main);
 
         textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
         textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
         textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
+        addHeaderRow();
 
-        // Ask for permissions.
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        // Creates backup folder.
+        if (!BACKUP_FOLDER.exists())
+            BACKUP_FOLDER.mkdirs(); // this will create folder.
+
+        currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        try
         {
-            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
-        } else
+            downloadedFile = File.createTempFile("tempFromServer", null, BACKUP_FOLDER);
+        } catch (IOException e)
         {
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-            {
-                shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
-                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
-            } else
-            {
-                // Creates backup folder.
-                if (!BACKUP_FOLDER.exists())
-                    BACKUP_FOLDER.mkdirs(); // this will create folder.
-
-                currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
-
-                try
-                {
-                    downloadedFile = File.createTempFile("tempFromServer", null, BACKUP_FOLDER);
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-
-                if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
-                    onClickAskForLogin(null);
-
-
-                addHeaderRow();
-
-                sendQueryAndShow("SELECT * FROM IncomeOutgo");
-
-                try
-                {
-                    if (currentFirebaseUser != null)
-                    {
-                        loadDataFromServer();
-                    }
-
-                } catch (ParseException e)
-                {
-                    e.printStackTrace();
-                }
-            }
+            e.printStackTrace();
         }
+
+        sendQueryAndShow("SELECT * FROM IncomeOutgo");
+
 
     }
 
     @Override
-    protected void onResume()
+    protected void onStart()
     {
-        super.onResume();
+        super.onStart();
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
@@ -181,17 +139,20 @@ public class MainActivity extends AppCompatActivity
             getBaseContext().getResources().updateConfiguration(config,
                     getBaseContext().getResources().getDisplayMetrics());
             settings.edit().putString("language", selectedLanguage).apply();
-
         }
 
-        //onClickRefresh(null);
+        // Permissions granted.
+        askForPermissions();
 
-    }
 
-    @Override
-    protected void onPause()
-    {
-        super.onPause();
+        if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
+            onClickAskForLogin(null);
+
+        if (currentFirebaseUser != null)
+        {
+            synchData();
+        }
+
     }
 
     @Override
@@ -201,14 +162,14 @@ public class MainActivity extends AppCompatActivity
 
         if (requestCode == READ_EXTERNAL_STORAGE || requestCode == WRITE_EXTERNAL_STORAGE)
         {
-            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             {
                 finish();
                 Intent refresh = new Intent(getBaseContext(), MainActivity.class);
                 startActivity(refresh);
             } else
             {
-                Toast.makeText(this, "Nie przyznano wymaganych uprawnień..", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Nie przyznano wymaganych uprawnień.", Toast.LENGTH_SHORT).show();
                 finish();
             }
         } else
@@ -256,13 +217,9 @@ public class MainActivity extends AppCompatActivity
             {
                 currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
                 Toast.makeText(getBaseContext(), "Zalogowano", Toast.LENGTH_SHORT).show();
-                try
-                {
-                    loadDataFromServer();
-                } catch (ParseException e)
-                {
-                    e.printStackTrace();
-                }
+
+                synchData();
+
             } else
             {
                 // Sign in failed. If response is null the user canceled the
@@ -693,6 +650,14 @@ public class MainActivity extends AppCompatActivity
                 textViewOutgo.setText("0");
                 sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
+                try
+                {
+                    saveAllDataToFile();
+                    synchData();
+                } catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
                 Toast.makeText(getBaseContext(), getString(R.string.info_clear_all), Toast.LENGTH_SHORT).show();
             }
         });
@@ -942,34 +907,8 @@ public class MainActivity extends AppCompatActivity
         writer.close();
     }
 
-    // TODO: NIEPOTRZEBNE, coś pomyślimy
-    public void onClickSaveFile(MenuItem item) throws IOException
-    {
-        saveAllDataToFile();
-
-        String message = getString(R.string.info_about_saving_1) + BACKUP_FILEPATH.getPath().toString() +
-                getString(R.string.info_about_saving_2) + "\n\n";
-
-        TextView showText = new TextView(this);
-        showText.setGravity(Gravity.CENTER);
-        showText.setTextSize(15);
-        showText.setTextColor(Color.BLACK);
-        showText.setText(message);
-        showText.setTextIsSelectable(true);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(getString(R.string.information));
-        builder.setView(showText);
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
-
-
-    }
-
     public void onClickLoadFile(MenuItem item)
     {
-
         final Scanner scanner;
         try
         {
@@ -1160,7 +1099,7 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    public void loadDataFromServer() throws ParseException
+    public void synchData()
     {
         final File localFile = new File(Environment.getExternalStorageDirectory().toString() + "/MySimpleWalletBackup" + FILENAME);
 
@@ -1181,7 +1120,6 @@ public class MainActivity extends AppCompatActivity
                             Date dateServerFile = null;
 
                             // Get time from server file.
-                            Log.d("pies", "PATH: " + downloadedFile.getAbsolutePath());
                             Scanner serverScanner = new Scanner(downloadedFile);
                             serverScanner.useDelimiter("\\n");
 
@@ -1198,11 +1136,8 @@ public class MainActivity extends AppCompatActivity
                                 e.printStackTrace();
                             }
 
-                            Log.d("pies",Long.toString(localFile.length())+"df");
                             if (localFile.length() != 0)
                             {
-                                Log.d("pies","ddd");
-
                                 // Get time from local file.
                                 try
                                 {
@@ -1225,10 +1160,8 @@ public class MainActivity extends AppCompatActivity
                                 }
 
                                 // If server backup is newer than local backup, use server backup, else use local backup.
-                                if (dateLocalFile.before(dateServerFile))
+                                if (dateServerFile.after(dateLocalFile))
                                 {
-                                    Log.d("pies","serwer");
-
                                     // Clears all data.
                                     deleteDatabase("Wallet");
                                     textViewBalance.setText("0");
@@ -1278,13 +1211,12 @@ public class MainActivity extends AppCompatActivity
                                     }
                                 } else
                                 {
-                                    Log.d("pies","local");
+                                    Log.d("pies", "local");
 
                                     sendQueryAndShow("SELECT * FROM IncomeOutgo");
                                     sendLocalFileToServer();
                                 }
-                            }
-                            else // If local backup is just created.
+                            } else // If local backup is just created.
                             {
                                 // Clears all data.
                                 deleteDatabase("Wallet");
@@ -1361,14 +1293,9 @@ public class MainActivity extends AppCompatActivity
         // Checks if exists newer version.
         sendQueryAndShow("SELECT * FROM IncomeOutgo");
 
-        try
-        {
-            if (currentFirebaseUser != null)
-                loadDataFromServer();
-        } catch (ParseException e)
-        {
-            e.printStackTrace();
-        }
+        if (currentFirebaseUser != null)
+            synchData();
+
 
     }
 
@@ -1408,5 +1335,22 @@ public class MainActivity extends AppCompatActivity
         }
 
     }
+
+    public void askForPermissions()
+    {
+        // Ask for permissions.
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        {
+            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
+        } else if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+        {
+            shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
+        }
+
+    }
+
+
 }
 
