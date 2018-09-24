@@ -17,6 +17,7 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.regex.Pattern;
@@ -159,7 +160,8 @@ public class filter_dialog extends DialogFragment
                     getDialog().dismiss();
                 }
 
-                ((MainActivity)getActivity()).sendQueryAndShow(sqlQuery);
+                ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery(sqlQuery);
+                ((MainActivity)getActivity()).showResults(registrations);
                 ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter));
 
                 getDialog().dismiss();
@@ -180,7 +182,8 @@ public class filter_dialog extends DialogFragment
             @Override
             public void onClick(View v)
             {
-                ((MainActivity)getActivity()).sendQueryAndShow("SELECT * FROM IncomeOutgo");
+                ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery("SELECT * FROM IncomeOutgo");
+                ((MainActivity)getActivity()).showResults(registrations);
 
                 ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter_outline));
                 getDialog().dismiss();
@@ -190,7 +193,6 @@ public class filter_dialog extends DialogFragment
 
         return dialogView;
     }
-
 
     public void onClickCalendar(View view)
     {

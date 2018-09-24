@@ -50,4 +50,11 @@
     <string name="select_language">Select language</string>
     <string name="connect_to_google">Connect to Google account</string>
     <string name="refresh">Refresh</string>
+    <string name="permissions_not_granted">Required permissions not granted.</string>
+    <string name="logged_up">Logged up</string>
+    <string name="login_failed">Login failed</string>
+    <string name="do_you_want_to_log_in">Do you want to log in?</string>
+    <string name="info_about_logging">You can log in to your Google account and store data in the cloud or store data only locally on your device. \\n Remember, you can create a backup file and upload it to another device without logging in.</string>
+    <string name="skip">Skip</string>
+    <string name="info_about_logging_from_settings">You can still connect to account from settings.</string>
 </resources>

@@ -50,4 +50,11 @@
     <string name="select_language">Wybierz język</string>
     <string name="connect_to_google">Połącz z kontem Google</string>
     <string name="refresh">Odśwież</string>
+    <string name="permissions_not_granted">Nie przyznano wymaganych uprawnień.</string>
+    <string name="logged_up">Zalogowano</string>
+    <string name="login_failed">Logowanie nie powiodło się</string>
+    <string name="do_you_want_to_log_in">Czy chcesz się zalogować?</string>
+    <string name="info_about_logging">Możesz zalogować się na swoje konto Google i przechowywać dane w chmurze lub trzymać dane tylko lokalnie na urządzeniu.\\n Pamiętaj, możesz stworzyć plik z kopią zapasową i wgrać go na inne urządzenie, bez konieczności logowania.</string>
+    <string name="skip">Pomiń</string>
+    <string name="info_about_logging_from_settings">Opcja połączenia z kontem dostepna w ustawieniach.</string>
 </resources>
