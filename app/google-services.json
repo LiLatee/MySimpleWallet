@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1005696067908",
+    "firebase_url": "https://mysimplewallet-17a92.firebaseio.com",
+    "project_id": "mysimplewallet-17a92",
+    "storage_bucket": "mysimplewallet-17a92.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005696067908:android:d0b238a4ad525591",
+        "android_client_info": {
+          "package_name": "com.example.marcin.mysimplewallet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1005696067908-pvnu4rg6env8baqcihqbtggfr5g33n46.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.marcin.mysimplewallet",
+            "certificate_hash": "2e032c4f189e5229276505c98eb80e98847e908f"
+          }
+        },
+        {
+          "client_id": "1005696067908-q5rv99o3ihaj081r1g0kusn05e8jg3jo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhEmxaASs_nYY3Y7tq_uLsBBIO93PjNmE"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1005696067908-q5rv99o3ihaj081r1g0kusn05e8jg3jo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
