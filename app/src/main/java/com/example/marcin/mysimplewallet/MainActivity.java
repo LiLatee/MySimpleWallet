@@ -48,6 +48,8 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -71,6 +73,8 @@ public class MainActivity extends AppCompatActivity
     private static final File BACKUP_FOLDER = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
     private static final String FILENAME = "/backupMySimpleWallet";
     private static final File BACKUP_FILEPATH = new File(BACKUP_FOLDER, FILENAME);
+    private static final NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
+    private static  DecimalFormat df2 = (DecimalFormat)nf;
 
 
     private SQLiteDatabase db;
@@ -87,6 +91,8 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        df2.applyPattern(".##");
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
@@ -243,12 +249,12 @@ public class MainActivity extends AppCompatActivity
                 TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
                 double valueD = Double.parseDouble(balance.getText().toString());
                 valueD += Double.parseDouble(value);
-                balance.setText(Double.toString(valueD));
+                balance.setText(df2.format((valueD)));
 
                 TextView wydatki = (TextView) findViewById(R.id.textViewOutgoValue);
                 double wydatkiD = Double.parseDouble(wydatki.getText().toString());
                 wydatkiD += Double.parseDouble(value.substring(1));
-                wydatki.setText(Double.toString(wydatkiD));
+                wydatki.setText(df2.format((wydatkiD)));
 
 
             } else if (requestCode == REQUEST_CODE_INCOME)
@@ -270,13 +276,13 @@ public class MainActivity extends AppCompatActivity
                 TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
                 double valueD = Double.parseDouble(balance.getText().toString());
                 valueD += Double.parseDouble(value);
-                balance.setText(Double.toString(valueD));
+                balance.setText(df2.format((valueD)));
 
                 TextView przychod = (TextView) findViewById(R.id.textViewIncomeValue);
                 double przychodD = Double.parseDouble(przychod.getText().toString());
                 przychodD += Double.parseDouble(value);
 
-                przychod.setText(Double.toString(przychodD));
+                przychod.setText(df2.format((przychodD)));
 
 
             } else if (requestCode == REQUEST_CODE_EDIT)
@@ -305,17 +311,17 @@ public class MainActivity extends AppCompatActivity
                     Double oldOutgo = Double.parseDouble(textViewOutgo.getText().toString());
 
                     Double newBalance = oldBalance - Double.parseDouble(oldValue) + Double.parseDouble(value);
-                    textViewBalance.setText(Double.toString(newBalance));
+                    textViewBalance.setText(df2.format((newBalance)));
                     Double newIncome, newOutgo;
 
                     if (incomeOrOutgo == 1)
                     {
                         newIncome = oldIncome - Double.parseDouble(oldValue) + Double.parseDouble(value);
-                        textViewIncome.setText(Double.toString(newIncome));
+                        textViewIncome.setText(df2.format((newIncome)));
                     } else
                     {
                         newOutgo = oldOutgo + Double.parseDouble(oldValue) - Double.parseDouble(value);
-                        textViewOutgo.setText(Double.toString(newOutgo));
+                        textViewOutgo.setText(df2.format((newOutgo)));
                     }
                     ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
                     showResults(registrations);
@@ -713,9 +719,9 @@ public class MainActivity extends AppCompatActivity
             balance += Double.parseDouble(x.value);
 
         }
-        textViewBalance.setText(Double.toString(balance));
-        textViewIncome.setText(Double.toString(income));
-        textViewOutgo.setText(Double.toString(outgo));
+        textViewBalance.setText(df2.format(balance).toString());
+        textViewIncome.setText(df2.format(income));
+        textViewOutgo.setText(df2.format(outgo));
     }
 
     public ArrayList<Registration> sendQuery(String sqlQuery)
@@ -845,9 +851,9 @@ public class MainActivity extends AppCompatActivity
 
                     balance += Double.parseDouble(x.value);
                 }
-                textViewBalance.setText(Double.toString(balance));
-                textViewIncome.setText(Double.toString(income));
-                textViewOutgo.setText(Double.toString(outgo));
+                textViewBalance.setText(df2.format((balance)));
+                textViewIncome.setText(df2.format((income)));
+                textViewOutgo.setText(df2.format((outgo)));
 
                 Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
             }
@@ -1033,7 +1039,6 @@ public class MainActivity extends AppCompatActivity
 
                                 if (dateServerFile.after(dateLocalFile))
                                 {
-                                    Log.d("pies", "serwer");
 
                                     // Clears all data.
                                     deleteDatabase("Wallet");
@@ -1070,9 +1075,9 @@ public class MainActivity extends AppCompatActivity
                                         balance += Double.parseDouble(x.value);
 
                                     }
-                                    textViewBalance.setText(Double.toString(balance));
-                                    textViewIncome.setText(Double.toString(income));
-                                    textViewOutgo.setText(Double.toString(outgo));
+                                    textViewBalance.setText(df2.format((balance)));
+                                    textViewIncome.setText(df2.format((income)));
+                                    textViewOutgo.setText(df2.format((outgo)));
 
                                     Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
 
@@ -1128,9 +1133,9 @@ public class MainActivity extends AppCompatActivity
                                     balance += Double.parseDouble(x.value);
 
                                 }
-                                textViewBalance.setText(Double.toString(balance));
-                                textViewIncome.setText(Double.toString(income));
-                                textViewOutgo.setText(Double.toString(outgo));
+                                textViewBalance.setText(df2.format((balance)));
+                                textViewIncome.setText(df2.format((income)));
+                                textViewOutgo.setText(df2.format((outgo)));
 
                                 Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
 
