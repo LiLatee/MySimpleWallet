@@ -14,7 +14,17 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -22,14 +32,18 @@ import java.util.Locale;
 public class add extends AppCompatActivity
 {
     private EditText editTextTitle, editTextValue, editTextDate;
-    private String oldTitle, oldValue, oldDateS;
     private String selectedLanguage = null;
+    private String id;
+    private Registry editRegistry;
+    private DatabaseReference database;
+    private FirebaseUser currentFirebaseUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add);
+
 
         // Language settings.
         selectedLanguage = getIntent().getExtras().getString("language");
@@ -52,23 +66,49 @@ public class add extends AppCompatActivity
 
 
         Calendar calendar = Calendar.getInstance();
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd");
+        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yy");
         Date date = null;
         try {date = calendar.getTime(); } catch (Exception e) {e.printStackTrace();}
         String dataS = formatter.format(date);
 
         editTextDate.setText(dataS);
 
-        // Do it if edit mode.
+        currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+
+        // if edit mode.
         if (getIntent().getExtras().getString("edit?").equals("true"))
         {
-            oldTitle = getIntent().getExtras().getString("title");
-            oldValue = getIntent().getExtras().getString("value");
-            oldDateS = getIntent().getExtras().getString("date");
+            id = getIntent().getExtras().getString("id");
 
-            editTextTitle.setText(oldTitle);
-            editTextValue.setText(oldValue);
-            editTextDate.setText(oldDateS);
+            // search for proper registry by id
+            database.addValueEventListener(new ValueEventListener()
+            {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot)
+                {
+                    for (DataSnapshot child : dataSnapshot.getChildren())
+                    {
+                        if (child.getKey().equals(id))
+                        {
+                            editRegistry = child.getValue(Registry.class);
+                            break;
+                        }
+                    }
+
+                    editTextTitle.setText(editRegistry.title);
+                    editTextValue.setText(Float.toString(Math.abs(editRegistry.value)));
+                    editTextDate.setText(editRegistry.date);
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError)
+                {
+                    Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                }
+            });
+
+
         }
 
     }
@@ -109,8 +149,8 @@ public class add extends AppCompatActivity
                     monthS = "0" + monthS;
                 if (dayOfMonth  < 10)
                     dayS = "0" + dayS;
-                EditText textViewDate = (EditText) findViewById(R.id.editTextDateAdd);
-                textViewDate.setText((year) + "/" + monthS + "/" + dayS);
+                EditText editTextDate = (EditText) findViewById(R.id.editTextDateAdd);
+                editTextDate.setText(dayS + "/" + monthS + "/" + (year-2000));
             }
         };
 
@@ -132,7 +172,8 @@ public class add extends AppCompatActivity
         if (day  < 10)
             dayS = "0" + dayS;
 
-        editTextDate.setText(year + "/" + monthS + "/" + dayS);
+        editTextDate.setText(dayS + "/" + monthS + "/" + (year-2000));
+
     }
 
     public void onClickAdd(View view)
@@ -148,27 +189,24 @@ public class add extends AppCompatActivity
         if (editTextDate.getText().toString().isEmpty())
             editTextDate.setText("-");
 
-        int incomeOrOutgo = getIntent().getExtras().getInt("IncomeOrOutgo");
-        Intent i = new Intent();
 
+
+        String id;
         if (getIntent().getExtras().getString("edit?").equals("true"))
-        {
-            i.putExtra("edit?", "true");
-            i.putExtra("oldTitle", oldTitle);
-            if ( incomeOrOutgo == 0)
-                i.putExtra( "oldValue", "-" + oldValue);
-            else
-                i.putExtra("oldValue", oldValue);
-            i.putExtra("oldDate", oldDateS);
-        }
+            id = getIntent().getExtras().getString("id");
         else
-            i.putExtra("edit?", "false");
+            id = database.push().getKey();
+        String title = editTextTitle.getText().toString();
+        float value;
+        String date = editTextDate.getText().toString();
+        int incomeOrOutgo = getIntent().getExtras().getInt("IncomeOrOutgo");
+        if ( incomeOrOutgo == 0) value = -1 * Float.parseFloat(editTextValue.getText().toString());
+        else value = Float.parseFloat(editTextValue.getText().toString());
 
-        i.putExtra("title", editTextTitle.getText().toString());
-        if ( incomeOrOutgo == 0) i.putExtra( "value", "-" + editTextValue.getText().toString());
-        else i.putExtra("value", editTextValue.getText().toString());
-        i.putExtra("date", editTextDate.getText().toString());
-        i.putExtra("incomeOrOutgo", incomeOrOutgo);
+        Registry registryToAdd = new Registry(id, title, value, date);
+        database.child(id).setValue(registryToAdd);
+
+        Intent i = new Intent();
         setResult(RESULT_OK, i);
         finish();
     }

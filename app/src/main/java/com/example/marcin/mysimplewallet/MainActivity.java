@@ -33,11 +33,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
-import com.firebase.ui.auth.IdpResponse;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -68,13 +72,12 @@ public class MainActivity extends AppCompatActivity
     private static final int REQUEST_CODE_INCOME = 1;
     private static final int REQUEST_CODE_EDIT = 2;
     private static final int RC_SIGN_IN = 3;
-    private static final int WRITE_EXTERNAL_STORAGE = 4;
     private static final SimpleDateFormat SDF = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
     private static final File BACKUP_FOLDER = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
     private static final String FILENAME = "/backupMySimpleWallet";
     private static final File BACKUP_FILEPATH = new File(BACKUP_FOLDER, FILENAME);
-    private static final NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
-    private static  DecimalFormat df2 = (DecimalFormat)nf;
+    private static final NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.US);
+    private static  DecimalFormat decimalFormat = (DecimalFormat) numberFormat;
 
 
     private SQLiteDatabase db;
@@ -84,32 +87,30 @@ public class MainActivity extends AppCompatActivity
     private FirebaseUser currentFirebaseUser;
     private StorageReference serverFileRef;
     private StorageReference localFileRef;
-
     private File downloadedFile = null;
+    private ArrayList<Registry> registries;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
 
-        df2.applyPattern(".##");
+        decimalFormat.applyPattern(".##");
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
         selectedLanguage = settings.getString("language", "-");
 
-        setContentView(R.layout.activity_main);
 
+        // UI settings
+        setContentView(R.layout.activity_main);
         textViewBalance = (TextView) findViewById(R.id.textViewBalanceValue);
         textViewOutgo = (TextView) findViewById(R.id.textViewOutgoValue);
         textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
-
         addHeaderRow();
 
         currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-        showResults(registrations);
 
     }
 
@@ -131,33 +132,13 @@ public class MainActivity extends AppCompatActivity
             settings.edit().putString("language", selectedLanguage).apply();
         }
 
-        askForPermissions();
-
         if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
+        {
             onClickAskForLogin(null);
-
-        if (currentFirebaseUser != null)
-            synchData();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults)
-    {
-
-        if (requestCode == WRITE_EXTERNAL_STORAGE)
-        {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-            {
-            } else
-            {
-                Toast.makeText(this, R.string.permissions_not_granted, Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        } else
-        {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            refreshTable();
         }
+        else
+            refreshTable();
 
     }
 
@@ -185,6 +166,43 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    private void refreshTable()
+    {
+        registries = new ArrayList<Registry>();
+        DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+        database.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Float balance = 0.0f;
+                Float income = 0.0f;
+                Float outgo = 0.0f;
+
+                clearRows();
+
+                for (DataSnapshot child : dataSnapshot.getChildren())
+                {
+                    Registry registry = child.getValue(Registry.class);
+                    addNewRow(registry);
+                    registries.add(registry);
+                    if (registry.value < 0)
+                        outgo -= registry.value;
+                    else
+                        income += registry.value;
+                    balance += registry.value;
+                }
+
+                textViewBalance.setText(decimalFormat.format(balance));
+                textViewIncome.setText(decimalFormat.format(income));
+                textViewOutgo.setText(decimalFormat.format(outgo));
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent Data)
@@ -193,14 +211,12 @@ public class MainActivity extends AppCompatActivity
         // Login activity.
         if (requestCode == RC_SIGN_IN)
         {
-            IdpResponse response = IdpResponse.fromResultIntent(Data);
-
             if (resultCode == RESULT_OK)
             {
                 currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
                 Toast.makeText(getBaseContext(), R.string.logged_up, Toast.LENGTH_SHORT).show();
 
-                synchData();
+                //synchData();
 
             } else
             {
@@ -212,133 +228,20 @@ public class MainActivity extends AppCompatActivity
 
             }
         }
-
-
-        // Add outgo and income activities.
-        String title = null;
-        String value = null;
-        String date = null;
-        int incomeOrOutgo = 0;
-
-        if (resultCode == RESULT_OK)
+        else if(requestCode == REQUEST_CODE_OUTGO || requestCode == REQUEST_CODE_INCOME || requestCode == REQUEST_CODE_EDIT )
         {
-            if (Data.hasExtra("title"))
-                title = Data.getExtras().getString("title");
-            if (Data.hasExtra("value"))
-                value = Data.getExtras().getString("value");
-            if (Data.hasExtra("date"))
-                date = Data.getExtras().getString("date");
-            if (Data.hasExtra("incomeOrOutgo"))
-                incomeOrOutgo = Data.getExtras().getInt("incomeOrOutgo");
-
-            if (requestCode == REQUEST_CODE_OUTGO)
+            if (resultCode == RESULT_OK)
             {
-                addNewRow(title, value, date, 0);
-                addToDatabase(title, value, date, 0);
-
-                try
-                {
-                    saveAllDataToFile(); // Updates local backup.
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-                sendLocalFileToServer(); // Updates server backup.
-
-
-                TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
-                double valueD = Double.parseDouble(balance.getText().toString());
-                valueD += Double.parseDouble(value);
-                balance.setText(df2.format((valueD)));
-
-                TextView wydatki = (TextView) findViewById(R.id.textViewOutgoValue);
-                double wydatkiD = Double.parseDouble(wydatki.getText().toString());
-                wydatkiD += Double.parseDouble(value.substring(1));
-                wydatki.setText(df2.format((wydatkiD)));
-
-
-            } else if (requestCode == REQUEST_CODE_INCOME)
-            {
-
-                addNewRow(title, value, date, 1);
-                addToDatabase(title, value, date, 1);
-
-                try
-                {
-                    saveAllDataToFile(); // Updates local backup.
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-                sendLocalFileToServer(); // Updates server backup.
-
-
-                TextView balance = (TextView) findViewById(R.id.textViewBalanceValue);
-                double valueD = Double.parseDouble(balance.getText().toString());
-                valueD += Double.parseDouble(value);
-                balance.setText(df2.format((valueD)));
-
-                TextView przychod = (TextView) findViewById(R.id.textViewIncomeValue);
-                double przychodD = Double.parseDouble(przychod.getText().toString());
-                przychodD += Double.parseDouble(value);
-
-                przychod.setText(df2.format((przychodD)));
-
-
-            } else if (requestCode == REQUEST_CODE_EDIT)
-            {
-                TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-                if (Data.hasExtra("edit?") || Data.getExtras().getString("edit?").equals("true"))
-                {
-                    String oldTitle = Data.getExtras().getString("oldTitle");
-                    String oldValue = Data.getExtras().getString("oldValue");
-                    String oldDate = Data.getExtras().getString("oldDate");
-                    tableLayout.removeView(tableRowToEditDelete);
-                    String sqlQuery = " UPDATE IncomeOutgo SET" +
-                            " Title = '" + title + "'" +
-                            ", Value = " + value +
-                            ", Date = '" + date + "'" +
-                            " WHERE Title = '" + oldTitle + "'" +
-                            " AND Value = " + oldValue +
-                            " AND Date = '" + oldDate + "'";
-
-                    db.execSQL(sqlQuery);
-
-
-                    // Updates main information.
-                    Double oldBalance = Double.parseDouble(textViewBalance.getText().toString());
-                    Double oldIncome = Double.parseDouble(textViewIncome.getText().toString());
-                    Double oldOutgo = Double.parseDouble(textViewOutgo.getText().toString());
-
-                    Double newBalance = oldBalance - Double.parseDouble(oldValue) + Double.parseDouble(value);
-                    textViewBalance.setText(df2.format((newBalance)));
-                    Double newIncome, newOutgo;
-
-                    if (incomeOrOutgo == 1)
-                    {
-                        newIncome = oldIncome - Double.parseDouble(oldValue) + Double.parseDouble(value);
-                        textViewIncome.setText(df2.format((newIncome)));
-                    } else
-                    {
-                        newOutgo = oldOutgo + Double.parseDouble(oldValue) - Double.parseDouble(value);
-                        textViewOutgo.setText(df2.format((newOutgo)));
-                    }
-                    ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-                    showResults(registrations);
-                    Toast.makeText(this, getString(R.string.info_registration_changed), Toast.LENGTH_SHORT).show();
-                }
+                refreshTable();
             }
         }
     }
 
-    // int outgo_income
-    // outgo == 0
-    // income == 1
-    public void addNewRow(String title, String value, String date, int outgo_income)
+    public void addNewRow(Registry registry)
     {
-        final String titleF = title;
-        final String valueF = value;
-        final String dateF = date;
+        final String titleF = registry.title;
+        final String valueF = Float.toString(registry.value);
+        final String dateF = registry.date;
         View.OnClickListener onClickListener = new View.OnClickListener()
         {
             @Override
@@ -360,43 +263,34 @@ public class MainActivity extends AppCompatActivity
         TableRowWithContextMenuInfo.LayoutParams size2 = new TableRowWithContextMenuInfo.LayoutParams();
         size2.weight = 2;
 
-        TextView textViewTytul = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
-        textViewTytul.setWidth(TableRowWithContextMenuInfo.LayoutParams.MATCH_PARENT);
-        textViewTytul.setText(title);
-        textViewTytul.setLayoutParams(size2);
-        textViewTytul.setTextSize(20);
-        tableRow.addView(textViewTytul);
+        TextView textViewTitle = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
+        textViewTitle.setWidth(TableRowWithContextMenuInfo.LayoutParams.MATCH_PARENT);
+        textViewTitle.setText(titleF);
+        textViewTitle.setLayoutParams(size2);
+        textViewTitle.setTextSize(20);
+        tableRow.addView(textViewTitle);
 
-        TextView textViewKwota = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
-        textViewKwota.setLayoutParams(size);
-        textViewKwota.setMaxEms(2);
-        textViewKwota.setText(value);
-        tableRow.addView(textViewKwota);
+        TextView textViewValue = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
+        textViewValue.setLayoutParams(size);
+        textViewValue.setMaxEms(2);
+        textViewValue.setText(valueF);
+        tableRow.addView(textViewValue);
 
-        TextView textViewData = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
-        textViewData.setMaxEms(2);
+        TextView textViewDate = (TextView) getLayoutInflater().inflate(R.layout.text_view_in_table, null);
+        textViewDate.setMaxEms(2);
+        textViewDate.setText(dateF);
+        textViewDate.setLayoutParams(size);
+        tableRow.addView(textViewDate);
 
-        // Changes date show format from yyyy/mm/dd to dd/mm/yy
-        String a = date.substring(2, 4);
-        String b = date.substring(8, 10);
-        textViewData.setText(b + date.substring(4, 8) + a);
-        textViewData.setLayoutParams(size);
-        tableRow.addView(textViewData);
-
-
-        if (outgo_income == 0)
-        {
+        if (Float.parseFloat(valueF) < 0f)
             tableRow.setBackgroundResource(R.color.wydatek);
-            tableRow.setTag("0");
-        } else
-        {
+        else
             tableRow.setBackgroundResource(R.color.przychod);
-            tableRow.setTag("1");
-        }
 
         registerForContextMenu(tableRow);
         tableRow.setOnClickListener(onClickListener);
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+        tableRow.setTag(registry.id);
         tableLayout.addView(tableRow, 0);
 
 
@@ -472,8 +366,8 @@ public class MainActivity extends AppCompatActivity
 
         ArrayList<Registration> registrations = sendQuery(sqlQuery);
         clearRows();
-        for (Registration x : registrations)
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+       // for (Registration x : registrations)
+        //    addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickValue(View view)
@@ -494,8 +388,8 @@ public class MainActivity extends AppCompatActivity
         ArrayList<Registration> registrations = sendQuery(sqlQuery);
         clearRows();
 
-        for (Registration x : registrations)
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+       // for (Registration x : registrations)
+            //addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickDate(View view)
@@ -516,8 +410,8 @@ public class MainActivity extends AppCompatActivity
         ArrayList<Registration> registrations = sendQuery(sqlQuery);
         clearRows();
 
-        for (Registration x : registrations)
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+        //for (Registration x : registrations)
+            //addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickFilter(MenuItem item)
@@ -527,7 +421,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void onClickClearAll(MenuItem item)
-    {
+    {/*
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setCancelable(false);
         builder.setTitle(getString(R.string.info_clear_all_question));
@@ -545,12 +439,12 @@ public class MainActivity extends AppCompatActivity
                 textViewIncome.setText("0");
                 textViewOutgo.setText("0");
                 ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-                showResults(registrations);
+                //showResults(registrations);
 
                 try
                 {
                     saveAllDataToFile();
-                    synchData();
+                    //synchData();
                 } catch (Exception e)
                 {
                     e.printStackTrace();
@@ -569,7 +463,7 @@ public class MainActivity extends AppCompatActivity
 
         AlertDialog dialog = builder.create();
         dialog.show();
-
+*/
     }
 
     public Menu menu;
@@ -602,7 +496,7 @@ public class MainActivity extends AppCompatActivity
 
                 String sqlQuery = "SELECT * FROM IncomeOutgo WHERE Title LIKE '%" + s + "%'";
                 ArrayList<Registration> registrations = sendQuery(sqlQuery);
-                showResults(registrations);
+                //showResults(registrations);
 
                 return false;
             }
@@ -627,7 +521,7 @@ public class MainActivity extends AppCompatActivity
     public boolean onContextItemSelected(MenuItem item)
     {
         TableRowWithContextMenuInfo.TableRowContextMenuInfo menuInfo = (TableRowWithContextMenuInfo.TableRowContextMenuInfo) item.getMenuInfo();
-        TableRowWithContextMenuInfo tableRow = (TableRowWithContextMenuInfo) menuInfo.targetView;
+        final TableRowWithContextMenuInfo tableRow = (TableRowWithContextMenuInfo) menuInfo.targetView;
 
         tableRowToEditDelete = tableRow;
         TableLayout tableLayout = (TableLayout) tableRow.getParent();
@@ -640,11 +534,6 @@ public class MainActivity extends AppCompatActivity
         String value = textViewValue.getText().toString();
 
         String date = textViewDate.getText().toString();
-        String a = date.substring(0, 2);
-        String b = date.substring(6, 8);
-        date = "20" + b + date.substring(2, 6) + a; // from DD/MM/YY -> YYYY/MM/DD
-
-        String incomeOrOutgo = tableRow.getTag().toString();
 
         switch (item.getItemId())
         {
@@ -655,37 +544,44 @@ public class MainActivity extends AppCompatActivity
                 // 1 - income
 
                 if (Double.parseDouble(value) < 0)
-                    value = value.substring(1);
+                    i.putExtra("IncomeOrOutgo", 0);
+                else
+                    i.putExtra("IncomeOrOutgo", 1);
+
                 i.putExtra("edit?", "true");
-                i.putExtra("title", title);
-                i.putExtra("value", value);
-                i.putExtra("date", date);
-                i.putExtra("IncomeOrOutgo", Integer.parseInt(incomeOrOutgo));
                 i.putExtra("language", selectedLanguage);
+                i.putExtra("id", tableRow.getTag().toString());
+
                 startActivityForResult(i, REQUEST_CODE_EDIT);
 
                 return true;
             }
             case R.id.deleteRow:
             {
-                if (item instanceof TableRowWithContextMenuInfo)
-                    ((ViewGroup) item).removeAllViews();
-                String sqlQuery = "DELETE FROM IncomeOutgo " +
-                        "WHERE Title = '" + title + "'" +
-                        " AND Value = " + value +
-                        " AND Date = '" + date + "'";
-                db.execSQL(sqlQuery);
-                tableLayout.removeView(tableRow);
-                Toast.makeText(this, getString(R.string.info_registration_deleted), Toast.LENGTH_SHORT).show();
+                DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
 
-                try
+                database.addValueEventListener(new ValueEventListener()
                 {
-                    saveAllDataToFile(); // Updates local backup.
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-                sendLocalFileToServer(); // Updates server backup.
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot)
+                    {
+                        for (DataSnapshot child : dataSnapshot.getChildren())
+                        {
+                            if (child.getKey().equals(tableRow.getTag().toString()))
+                            {
+                                child.getRef().removeValue();
+                                break;
+                            }
+                        }
+                        refreshTable();
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError)
+                    {
+                        Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                    }
+                });
                 return true;
             }
             default:
@@ -693,7 +589,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    protected void showResults(ArrayList<Registration> registrations)
+   /*protected void showResults(ArrayList<Registration> registrations)
     {
         // Clears all table's rows.
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
@@ -710,7 +606,7 @@ public class MainActivity extends AppCompatActivity
         // Sets main information and proper rows.
         for (Registration x : registrations)
         {
-            addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+            addNewRow(x.title, x.value, x.date);
             if (x.incomeOrOutgo == 0)
                 outgo -= Double.parseDouble(x.value);
             else
@@ -719,10 +615,10 @@ public class MainActivity extends AppCompatActivity
             balance += Double.parseDouble(x.value);
 
         }
-        textViewBalance.setText(df2.format(balance).toString());
-        textViewIncome.setText(df2.format(income));
-        textViewOutgo.setText(df2.format(outgo));
-    }
+        textViewBalance.setText(decimalFormat.format(balance).toString());
+        textViewIncome.setText(decimalFormat.format(income));
+        textViewOutgo.setText(decimalFormat.format(outgo));
+    }*/
 
     public ArrayList<Registration> sendQuery(String sqlQuery)
     {
@@ -775,7 +671,7 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickLoadFile(MenuItem item)
     {
-        final Scanner scanner;
+        /*final Scanner scanner;
         try
         {
             scanner = new Scanner(BACKUP_FILEPATH);
@@ -842,7 +738,7 @@ public class MainActivity extends AppCompatActivity
                 Double balance = 0.0, income = 0.0, outgo = 0.0;
                 for (Registration x : registrations)
                 {
-                    addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                    addNewRow(x.title, x.value, x.date);
                     addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
                     if (x.incomeOrOutgo == 0)
                         outgo -= Double.parseDouble(x.value);
@@ -851,9 +747,9 @@ public class MainActivity extends AppCompatActivity
 
                     balance += Double.parseDouble(x.value);
                 }
-                textViewBalance.setText(df2.format((balance)));
-                textViewIncome.setText(df2.format((income)));
-                textViewOutgo.setText(df2.format((outgo)));
+                textViewBalance.setText(decimalFormat.format((balance)));
+                textViewIncome.setText(decimalFormat.format((income)));
+                textViewOutgo.setText(decimalFormat.format((outgo)));
 
                 Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
             }
@@ -868,7 +764,7 @@ public class MainActivity extends AppCompatActivity
         });
 
         AlertDialog dialog = builder.create();
-        dialog.show();
+        dialog.show();*/
 
 
     }
@@ -925,6 +821,8 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickAskForLogin(MenuItem item)
     {
+        Log.d("koy", "...");
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.do_you_want_to_log_in);
         builder.setMessage(R.string.info_about_logging);
@@ -966,7 +864,7 @@ public class MainActivity extends AppCompatActivity
 
     public void synchData()
     {
-        final File localFile = new File(Environment.getExternalStorageDirectory().toString() + "/MySimpleWalletBackup" + FILENAME);
+        /*final File localFile = new File(Environment.getExternalStorageDirectory().toString() + "/MySimpleWalletBackup" + FILENAME);
 
         // Creates backup folder.
         if (!BACKUP_FOLDER.exists())
@@ -1065,7 +963,7 @@ public class MainActivity extends AppCompatActivity
                                     Double balance = 0.0, income = 0.0, outgo = 0.0;
                                     for (Registration x : registrations)
                                     {
-                                        addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                                        addNewRow(x.title, x.value, x.date);
                                         addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
                                         if (x.incomeOrOutgo == 0)
                                             outgo -= Double.parseDouble(x.value);
@@ -1075,9 +973,9 @@ public class MainActivity extends AppCompatActivity
                                         balance += Double.parseDouble(x.value);
 
                                     }
-                                    textViewBalance.setText(df2.format((balance)));
-                                    textViewIncome.setText(df2.format((income)));
-                                    textViewOutgo.setText(df2.format((outgo)));
+                                    textViewBalance.setText(decimalFormat.format((balance)));
+                                    textViewIncome.setText(decimalFormat.format((income)));
+                                    textViewOutgo.setText(decimalFormat.format((outgo)));
 
                                     Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
 
@@ -1123,7 +1021,7 @@ public class MainActivity extends AppCompatActivity
                                 Double balance = 0.0, income = 0.0, outgo = 0.0;
                                 for (Registration x : registrations)
                                 {
-                                    addNewRow(x.title, x.value, x.date, x.incomeOrOutgo);
+                                    addNewRow(x.title, x.value, x.date);
                                     addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
                                     if (x.incomeOrOutgo == 0)
                                         outgo -= Double.parseDouble(x.value);
@@ -1133,9 +1031,9 @@ public class MainActivity extends AppCompatActivity
                                     balance += Double.parseDouble(x.value);
 
                                 }
-                                textViewBalance.setText(df2.format((balance)));
-                                textViewIncome.setText(df2.format((income)));
-                                textViewOutgo.setText(df2.format((outgo)));
+                                textViewBalance.setText(decimalFormat.format((balance)));
+                                textViewIncome.setText(decimalFormat.format((income)));
+                                textViewOutgo.setText(decimalFormat.format((outgo)));
 
                                 Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
 
@@ -1166,11 +1064,11 @@ public class MainActivity extends AppCompatActivity
                         // Probably no needed.
                     }
                 });
-
+*/
     }
 
     public void onClickRefresh(MenuItem item)
-    {
+    {/*
         ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
         showResults(registrations);
 
@@ -1178,7 +1076,7 @@ public class MainActivity extends AppCompatActivity
         if (currentFirebaseUser != null)
             synchData();
 
-
+*/
     }
 
     public void sendLocalFileToServer()
@@ -1211,21 +1109,6 @@ public class MainActivity extends AppCompatActivity
                 }
             });
         }
-
-    }
-
-    public void askForPermissions()
-    {
-        // Ask for permissions.
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-        {
-            shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, WRITE_EXTERNAL_STORAGE);
-        } /*else if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-        {
-            shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE);
-            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, READ_EXTERNAL_STORAGE);
-        }*/
 
     }
 

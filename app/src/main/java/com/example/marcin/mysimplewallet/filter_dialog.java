@@ -161,7 +161,7 @@ public class filter_dialog extends DialogFragment
                 }
 
                 ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery(sqlQuery);
-                ((MainActivity)getActivity()).showResults(registrations);
+                //((MainActivity)getActivity()).showResults(registrations);
                 ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter));
 
                 getDialog().dismiss();
@@ -183,7 +183,7 @@ public class filter_dialog extends DialogFragment
             public void onClick(View v)
             {
                 ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery("SELECT * FROM IncomeOutgo");
-                ((MainActivity)getActivity()).showResults(registrations);
+                //((MainActivity)getActivity()).showResults(registrations);
 
                 ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter_outline));
                 getDialog().dismiss();
