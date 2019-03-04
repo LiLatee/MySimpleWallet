@@ -58,6 +58,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -111,6 +113,7 @@ public class MainActivity extends AppCompatActivity
 
         currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
+        registries = new ArrayList<Registry>();
 
     }
 
@@ -135,7 +138,6 @@ public class MainActivity extends AppCompatActivity
         if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
         {
             onClickAskForLogin(null);
-            refreshTable();
         }
         else
             refreshTable();
@@ -178,7 +180,7 @@ public class MainActivity extends AppCompatActivity
                 Float outgo = 0.0f;
 
                 clearRows();
-
+                registries.clear();
                 for (DataSnapshot child : dataSnapshot.getChildren())
                 {
                     Registry registry = child.getValue(Registry.class);
@@ -215,6 +217,7 @@ public class MainActivity extends AppCompatActivity
             {
                 currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
                 Toast.makeText(getBaseContext(), R.string.logged_up, Toast.LENGTH_SHORT).show();
+                refreshTable();
 
                 //synchData();
 
@@ -347,11 +350,11 @@ public class MainActivity extends AppCompatActivity
     int titleState = 0;
     int valueState = 0;
     int dateState = 0;
-
+    
     public void onClickTitle(View view)
     {
 
-        String sqlQuery = null;
+        /*String sqlQuery = null;
         if (titleState == 0)
         {
             titleState = 1;
@@ -364,15 +367,44 @@ public class MainActivity extends AppCompatActivity
 
         createDatabaseIfNotExists();
 
-        ArrayList<Registration> registrations = sendQuery(sqlQuery);
+        ArrayList<Registration> registrations = sendQuery(sqlQuery);*/
+
+        if (titleState == 0)
+        {
+            titleState = 1;
+            Collections.sort(registries, new Comparator<Registry>()
+            {
+                @Override
+                public int compare(Registry o1, Registry o2)
+                {
+                    return o2.title.compareTo(o1.title);
+
+                }
+            });
+        } else
+        {
+            titleState = 0;
+            Collections.sort(registries, new Comparator<Registry>()
+            {
+                @Override
+                public int compare(Registry o1, Registry o2)
+                {
+                    return o1.title.compareTo(o2.title);
+
+                }
+            });
+        }
+
         clearRows();
+        for (Registry x : registries)
+            addNewRow(x);
        // for (Registration x : registrations)
         //    addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickValue(View view)
     {
-        String sqlQuery = null;
+        /*String sqlQuery = null;
         if (valueState == 0)
         {
             valueState = 1;
@@ -385,8 +417,44 @@ public class MainActivity extends AppCompatActivity
 
         createDatabaseIfNotExists();
 
-        ArrayList<Registration> registrations = sendQuery(sqlQuery);
+        ArrayList<Registration> registrations = sendQuery(sqlQuery);*/
+        if (valueState == 0)
+        {
+            valueState = 1;
+            Collections.sort(registries, new Comparator<Registry>()
+            {
+                @Override
+                public int compare(Registry o1, Registry o2)
+                {
+                    if (o1.value - o2.value > 0 )
+                        return 1;
+                    else if (o1.value - o2.value < 0 )
+                        return -1;
+                    else return 0;
+
+                }
+            });
+        } else
+        {
+            valueState = 0;
+            Collections.sort(registries, new Comparator<Registry>()
+            {
+                @Override
+                public int compare(Registry o1, Registry o2)
+                {
+                    if (o1.value - o2.value > 0 )
+                        return -1;
+                    else if (o1.value - o2.value < 0 )
+                        return 1;
+                    else return 0;
+
+                }
+            });
+        }
+
         clearRows();
+        for (Registry x : registries)
+            addNewRow(x);
 
        // for (Registration x : registrations)
             //addNewRow(x.title, x.value, x.date);
@@ -394,7 +462,7 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickDate(View view)
     {
-        String sqlQuery = null;
+        /*String sqlQuery = null;
         if (dateState == 0)
         {
             dateState = 1;
@@ -407,9 +475,37 @@ public class MainActivity extends AppCompatActivity
 
         createDatabaseIfNotExists();
 
-        ArrayList<Registration> registrations = sendQuery(sqlQuery);
-        clearRows();
+        ArrayList<Registration> registrations = sendQuery(sqlQuery);*/
 
+
+        if (dateState == 0)
+        {
+            dateState = 1;
+            Collections.sort(registries, new Comparator<Registry>()
+            {
+                @Override
+                public int compare(Registry o1, Registry o2)
+                {
+                    return o2.date.compareTo(o1.date);
+
+                }
+            });
+        } else
+        {
+            dateState = 0;
+            Collections.sort(registries, new Comparator<Registry>()
+            {
+                @Override
+                public int compare(Registry o1, Registry o2)
+                {
+                    return o1.date.compareTo(o2.date);
+
+                }
+            });
+        }
+        clearRows();
+        for (Registry x : registries)
+            addNewRow(x);
         //for (Registration x : registrations)
             //addNewRow(x.title, x.value, x.date);
     }
@@ -494,9 +590,15 @@ public class MainActivity extends AppCompatActivity
             public boolean onQueryTextChange(String s)
             {
 
-                String sqlQuery = "SELECT * FROM IncomeOutgo WHERE Title LIKE '%" + s + "%'";
-                ArrayList<Registration> registrations = sendQuery(sqlQuery);
+                //String sqlQuery = "SELECT * FROM IncomeOutgo WHERE Title LIKE '%" + s + "%'";
+                //ArrayList<Registration> registrations = sendQuery(sqlQuery);
                 //showResults(registrations);
+                clearRows();
+                for (Registry x : registries)
+                {
+                    if (x.title.matches("(.*)" + s + "(.*)"))
+                        addNewRow(x);
+                }
 
                 return false;
             }
@@ -841,7 +943,6 @@ public class MainActivity extends AppCompatActivity
                                 .setAvailableProviders(providers)
                                 .build(),
                         RC_SIGN_IN);
-
             }
         });
         builder.setNegativeButton(R.string.skip, new DialogInterface.OnClickListener()
