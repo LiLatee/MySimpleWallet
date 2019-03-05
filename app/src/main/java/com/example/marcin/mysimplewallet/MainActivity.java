@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity
     private static final String FILENAME = "/backupMySimpleWallet";
     private static final File BACKUP_FILEPATH = new File(BACKUP_FOLDER, FILENAME);
     private static final NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.US);
-    private static  DecimalFormat decimalFormat = (DecimalFormat) numberFormat;
+    private static DecimalFormat decimalFormat = (DecimalFormat) numberFormat;
 
 
     private SQLiteDatabase db;
@@ -138,8 +138,7 @@ public class MainActivity extends AppCompatActivity
         if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
         {
             onClickAskForLogin(null);
-        }
-        else
+        } else
             refreshTable();
 
     }
@@ -168,13 +167,40 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    private void refreshTable()
+    public void refreshTable(ArrayList<Registry> registries)
+    {
+
+        Float balance = 0.0f;
+        Float income = 0.0f;
+        Float outgo = 0.0f;
+
+        clearRows();
+        for (Registry registry : registries)
+        {
+            addNewRow(registry);
+            if (registry.value < 0)
+                outgo -= registry.value;
+            else
+                income += registry.value;
+            balance += registry.value;
+        }
+
+        textViewBalance.setText(decimalFormat.format(balance));
+        textViewIncome.setText(decimalFormat.format(income));
+        textViewOutgo.setText(decimalFormat.format(outgo));
+    }
+
+
+
+    public void refreshTable()
     {
         registries = new ArrayList<Registry>();
         DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
-        database.addValueEventListener(new ValueEventListener() {
+        database.addValueEventListener(new ValueEventListener()
+        {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
+            public void onDataChange(DataSnapshot dataSnapshot)
+            {
                 Float balance = 0.0f;
                 Float income = 0.0f;
                 Float outgo = 0.0f;
@@ -199,7 +225,8 @@ public class MainActivity extends AppCompatActivity
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
+            public void onCancelled(DatabaseError databaseError)
+            {
                 Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -230,8 +257,7 @@ public class MainActivity extends AppCompatActivity
                 Toast.makeText(getBaseContext(), R.string.login_failed, Toast.LENGTH_SHORT).show();
 
             }
-        }
-        else if(requestCode == REQUEST_CODE_OUTGO || requestCode == REQUEST_CODE_INCOME || requestCode == REQUEST_CODE_EDIT )
+        } else if (requestCode == REQUEST_CODE_OUTGO || requestCode == REQUEST_CODE_INCOME || requestCode == REQUEST_CODE_EDIT)
         {
             if (resultCode == RESULT_OK)
             {
@@ -335,7 +361,7 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    public  void clearRows()
+    public void clearRows()
     {
         TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
         int count = tableLayout.getChildCount();
@@ -350,7 +376,7 @@ public class MainActivity extends AppCompatActivity
     int titleState = 0;
     int valueState = 0;
     int dateState = 0;
-    
+
     public void onClickTitle(View view)
     {
 
@@ -398,7 +424,7 @@ public class MainActivity extends AppCompatActivity
         clearRows();
         for (Registry x : registries)
             addNewRow(x);
-       // for (Registration x : registrations)
+        // for (Registration x : registrations)
         //    addNewRow(x.title, x.value, x.date);
     }
 
@@ -426,9 +452,9 @@ public class MainActivity extends AppCompatActivity
                 @Override
                 public int compare(Registry o1, Registry o2)
                 {
-                    if (o1.value - o2.value > 0 )
+                    if (o1.value - o2.value > 0)
                         return 1;
-                    else if (o1.value - o2.value < 0 )
+                    else if (o1.value - o2.value < 0)
                         return -1;
                     else return 0;
 
@@ -442,9 +468,9 @@ public class MainActivity extends AppCompatActivity
                 @Override
                 public int compare(Registry o1, Registry o2)
                 {
-                    if (o1.value - o2.value > 0 )
+                    if (o1.value - o2.value > 0)
                         return -1;
-                    else if (o1.value - o2.value < 0 )
+                    else if (o1.value - o2.value < 0)
                         return 1;
                     else return 0;
 
@@ -456,8 +482,8 @@ public class MainActivity extends AppCompatActivity
         for (Registry x : registries)
             addNewRow(x);
 
-       // for (Registration x : registrations)
-            //addNewRow(x.title, x.value, x.date);
+        // for (Registration x : registrations)
+        //addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickDate(View view)
@@ -507,7 +533,7 @@ public class MainActivity extends AppCompatActivity
         for (Registry x : registries)
             addNewRow(x);
         //for (Registration x : registrations)
-            //addNewRow(x.title, x.value, x.date);
+        //addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickFilter(MenuItem item)
@@ -745,7 +771,7 @@ public class MainActivity extends AppCompatActivity
             } while (cursor.moveToNext());
         }
 
-        return  registrations;
+        return registrations;
 
     }
 

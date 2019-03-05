@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,14 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -30,11 +39,18 @@ public class filter_dialog extends DialogFragment
     private EditText ediTextFrom, editTextTo;
     private View dialogView;
     private SQLiteDatabase db;
+    private ArrayList<Registry> registries;
+    private FirebaseUser currentFirebaseUser;
+
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
     {
+        // Data
+        registries = new ArrayList<Registry>();
+        currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+
         dialogView = inflater.inflate(R.layout.filter, container, false);
         radioGroup = (RadioGroup) dialogView.findViewById(R.id.radioGroup);
         setDefaultDate();
@@ -113,8 +129,8 @@ public class filter_dialog extends DialogFragment
 
                 RadioButton selectedButton = (RadioButton) dialogView.findViewById(radioGroup.getCheckedRadioButtonId());
                 String sqlQuery = null;
-                String value1 = ediTextFrom.getText().toString();
-                String value2 = editTextTo.getText().toString();
+                final String value1 = ediTextFrom.getText().toString();
+                final String value2 = editTextTo.getText().toString();
                 if (value1.isEmpty() || value2.isEmpty())
                 {
                     Toast.makeText(getContext(), getString(R.string.info_empty_value), Toast.LENGTH_SHORT).show();
@@ -122,26 +138,51 @@ public class filter_dialog extends DialogFragment
                 }
                 if (selectedButton.getTag().equals("byDate"))
                 {
-                    String regex = "^[0-9]{4}/(0[1-9]|1[0-2])/([0-2][0-9]|3[0-1])$";
+                    String regex = "^[0-9]{2}/(0[1-9]|1[0-2])/([0-9]{2})$";
                     if (!Pattern.matches(regex, value1) || !Pattern.matches(regex, value2))
                     {
                         Toast.makeText(getContext(), getString(R.string.info_date_format_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    Date firstDate = new Date(value1);
-                    Date secondDate = new Date(value2);
+                    final Date firstDate = new Date(value1);
+                    final Date secondDate = new Date(value2);
                     if(firstDate.after(secondDate))
                     {
                         Toast.makeText(getContext(), getString(R.string.info_date_order_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE Date BETWEEN '" + value1 + "' AND '" + value2 + "'";
+                    //sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE Date BETWEEN '" + value1 + "' AND '" + value2 + "'";
+                    DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+                    database.addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+
+                            registries.clear();
+                            for (DataSnapshot child : dataSnapshot.getChildren())
+                            {
+                                Registry registry = child.getValue(Registry.class);
+                                Log.d("koy", registry.title);
+
+                                // If registry.date is between firstDate and secondDate
+                                if (new Date(registry.date).compareTo(firstDate) >= 0 && new Date(registry.date).compareTo(secondDate) <= 0 )
+                                    registries.add(registry);
+                            }
+                            ((MainActivity)getActivity()).refreshTable(registries);
+
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            Toast.makeText(getContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
                 }
                 else if (selectedButton.getTag().equals("byValue"))
                 {
 
-                    String regex = "^(0|([1-9][0-9]*))(\\.[0-9]+)?$";
+                    final String regex = "^(0|([1-9][0-9]*))(\\.[0-9]+)?$";
                     if (!Pattern.matches(regex, value1) || !Pattern.matches(regex, value2))
                     {
                         Toast.makeText(getContext(), getString(R.string.info_value_available_characters), Toast.LENGTH_SHORT).show();
@@ -152,7 +193,32 @@ public class filter_dialog extends DialogFragment
                         Toast.makeText(getContext(), getString(R.string.info_value_order_error), Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE " + "ABS(Value) BETWEEN " + value1 + " AND " + value2;
+                    //sqlQuery = "SELECT Id, Title, Value, Date, IncomeOrOutgo FROM IncomeOutgo WHERE " + "ABS(Value) BETWEEN " + value1 + " AND " + value2;
+                    DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+                    database.addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+
+                            registries.clear();
+                            for (DataSnapshot child : dataSnapshot.getChildren())
+                            {
+                                Registry registry = child.getValue(Registry.class);
+                                // If registry.value is between value1 and value2
+                                if (Math.abs(registry.value) >= Float.parseFloat(value1) && Math.abs(registry.value) <= Float.parseFloat(value2) )
+                                    registries.add(registry);
+
+                            }
+                            ((MainActivity)getActivity()).refreshTable(registries);
+
+
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            Toast.makeText(getContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
                 }
                 else if (selectedButton.getTag().equals("byTitle"))
                 {
@@ -160,9 +226,9 @@ public class filter_dialog extends DialogFragment
                     getDialog().dismiss();
                 }
 
-                ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery(sqlQuery);
+                //ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery(sqlQuery);
                 //((MainActivity)getActivity()).showResults(registrations);
-                ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter));
+                //((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter));
 
                 getDialog().dismiss();
             }
@@ -212,12 +278,12 @@ public class filter_dialog extends DialogFragment
 
                 if (calendarView.getTag().toString().equals("from"))
                 {
-                    EditText EditTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
-                    EditTextFrom.setText((year) + "/" + monthS + "/" + dayS);
+                    EditText editTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
+                    editTextFrom.setText(dayS + "/" + monthS + "/" + (year-2000));
                 } else
                 {
-                    EditText EditTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
-                    EditTextTo.setText((year) + "/" + monthS + "/" + dayS);
+                    EditText editTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
+                    editTextTo.setText(dayS + "/" + monthS + "/" + (year-2000));
                 }
             }
         };
@@ -243,12 +309,12 @@ public class filter_dialog extends DialogFragment
 
         if (calendarView.getTag().toString().equals("from"))
         {
-            EditText EditTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
-            EditTextFrom.setText((year) + "/" + monthS + "/" + dayS);
+            EditText editTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
+            editTextFrom.setText(dayS + "/" + monthS + "/" + (year-2000));
         } else
         {
-            EditText EditTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
-            EditTextTo.setText((year) + "/" + monthS + "/" + dayS);
+            EditText editTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
+            editTextTo.setText(dayS + "/" + monthS + "/" + (year-2000));
         }
     }
 
@@ -269,10 +335,10 @@ public class filter_dialog extends DialogFragment
             dayS = "0" + dayS;
 
         ediTextFrom = (EditText) dialogView.findViewById(R.id.editTextFrom);
-        ediTextFrom.setText(year + "/" + monthS + "/01");
+        ediTextFrom.setText("01" + "/" + monthS + "/" + (year-2000));
 
         editTextTo = (EditText) dialogView.findViewById(R.id.editTextTo);
-        editTextTo.setText(year + "/" + monthS + "/" + dayS);
+        editTextTo.setText(dayS + "/" + monthS + "/" + (year-2000));
     }
 
 
