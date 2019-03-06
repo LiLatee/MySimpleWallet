@@ -24,7 +24,6 @@
 
     <item android:id="@+id/loadFile"
         android:title="@string/load_backup"
-        android:onClick="onClickLoadFile"
         app:showAsAction="never" />
 
     <item android:id="@+id/changeLanguage"
@@ -40,7 +39,6 @@
     <item
         android:id="@+id/refresh"
         android:icon="@android:drawable/ic_popup_sync"
-        android:onClick="onClickRefresh"
         android:title="@string/refresh"
         app:showAsAction="always" />
 

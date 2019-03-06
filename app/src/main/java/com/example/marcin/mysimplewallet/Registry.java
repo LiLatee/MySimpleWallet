@@ -9,15 +9,17 @@ public class Registry
     String title;
     float value;
     String date;
+    String timestamp;
 
     public Registry(){}
 
-    public Registry(String id, String title, float value, String date)
+    public Registry(String id, String title, float value, String date, String timestamp)
     {
         this.id = id;
         this.title = title;
         this.value = value;
         this.date = date;
+        this.timestamp = timestamp;
     }
 
 

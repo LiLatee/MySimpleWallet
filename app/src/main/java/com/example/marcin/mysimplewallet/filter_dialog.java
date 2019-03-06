@@ -243,18 +243,18 @@ public class filter_dialog extends DialogFragment
             }
         });
         textViewRemoveFilter = (TextView) dialogView.findViewById(R.id.textViewRemoveFilter);
-        textViewRemoveFilter.setOnClickListener(new View.OnClickListener()
+       /* textViewRemoveFilter.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View v)
             {
-                ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQuery("SELECT * FROM IncomeOutgo");
+                ArrayList<Registration> registrations = ((MainActivity)getActivity()).sendQueryToLocalDB("SELECT * FROM IncomeOutgo");
                 //((MainActivity)getActivity()).showResults(registrations);
 
                 ((MainActivity)getActivity()).menu.getItem(1).setIcon(getResources().getDrawable(R.drawable.filter_outline));
                 getDialog().dismiss();
             }
-        });
+        });*/
 
 
         return dialogView;

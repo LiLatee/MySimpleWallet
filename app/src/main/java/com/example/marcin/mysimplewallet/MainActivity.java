@@ -1,26 +1,22 @@
 package com.example.marcin.mysimplewallet;
 
-import android.Manifest;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
-import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Environment;
-import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.ContextMenu;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -33,8 +29,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -42,28 +36,18 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.storage.FileDownloadTask;
-import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Scanner;
 
 // new branch check
 public class MainActivity extends AppCompatActivity
@@ -80,16 +64,14 @@ public class MainActivity extends AppCompatActivity
     private static final File BACKUP_FILEPATH = new File(BACKUP_FOLDER, FILENAME);
     private static final NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.US);
     private static DecimalFormat decimalFormat = (DecimalFormat) numberFormat;
+    private  static final String TABLE_NAME = "IncomeOutgo";
 
 
-    private SQLiteDatabase db;
+    public static SQLiteDatabase localDB;
     private TextView textViewBalance, textViewIncome, textViewOutgo;
     private SharedPreferences settings;
     private String selectedLanguage = "-";
     private FirebaseUser currentFirebaseUser;
-    private StorageReference serverFileRef;
-    private StorageReference localFileRef;
-    private File downloadedFile = null;
     private ArrayList<Registry> registries;
 
     @Override
@@ -114,6 +96,7 @@ public class MainActivity extends AppCompatActivity
         currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
         registries = new ArrayList<Registry>();
+        createDatabaseIfNotExists();
 
     }
 
@@ -194,42 +177,72 @@ public class MainActivity extends AppCompatActivity
 
     public void refreshTable()
     {
-        registries = new ArrayList<Registry>();
-        DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
-        database.addValueEventListener(new ValueEventListener()
-        {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot)
-            {
-                Float balance = 0.0f;
-                Float income = 0.0f;
-                Float outgo = 0.0f;
+        ConnectivityManager cm = (ConnectivityManager)getBaseContext().getSystemService(Context.CONNECTIVITY_SERVICE);
 
-                clearRows();
-                registries.clear();
-                for (DataSnapshot child : dataSnapshot.getChildren())
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+
+        // Get data from server.
+        if (isConnected)
+        {
+            registries = new ArrayList<Registry>();
+            DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+            database.addValueEventListener(new ValueEventListener()
+            {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot)
                 {
-                    Registry registry = child.getValue(Registry.class);
-                    addNewRow(registry);
-                    registries.add(registry);
-                    if (registry.value < 0)
-                        outgo -= registry.value;
-                    else
-                        income += registry.value;
-                    balance += registry.value;
+                    Float balance = 0.0f;
+                    Float income = 0.0f;
+                    Float outgo = 0.0f;
+
+                    clearRows();
+                    registries.clear();
+                    localDB.execSQL("DELETE from IncomeOutgo");
+                    for (DataSnapshot child : dataSnapshot.getChildren())
+                    {
+                        Registry registry = child.getValue(Registry.class);
+                        addNewRow(registry);
+                        registries.add(registry);
+                        addToDatabase(registry);
+                        if (registry.value < 0)
+                            outgo -= registry.value;
+                        else
+                            income += registry.value;
+                        balance += registry.value;
+                    }
+                    ArrayList <Registry> test = sendQueryToLocalDB("SELECT * FROM IncomeOutgo");
+                    for (Registry x : test)
+                    {
+                        Log.d("koy", x.id);
+                        Log.d("koy", x.title);
+                        Log.d("koy", Float.toString(x.value));
+                        Log.d("koy", x.date);
+                        Log.d("koy", x.timestamp);
+                    }
+
+                    textViewBalance.setText(decimalFormat.format(balance));
+                    textViewIncome.setText(decimalFormat.format(income));
+                    textViewOutgo.setText(decimalFormat.format(outgo));
                 }
 
-                textViewBalance.setText(decimalFormat.format(balance));
-                textViewIncome.setText(decimalFormat.format(income));
-                textViewOutgo.setText(decimalFormat.format(outgo));
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError)
+                @Override
+                public void onCancelled(DatabaseError databaseError)
+                {
+                    Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        else
+        {
+            // Get data from localDB.
+            ArrayList<Registry> registries = sendQueryToLocalDB("SELECT * FROM " + TABLE_NAME);
+            for (Registry registry : registries )
             {
-                Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                addNewRow(registry);
             }
-        });
+        }
+
 
     }
 
@@ -349,15 +362,16 @@ public class MainActivity extends AppCompatActivity
         tableLayout.addView(tableRow, 0);
     }
 
-    public void addToDatabase(String title, String value, String date, int incomeOrOutgo)
+    public static void addToDatabase(Registry registry)
     {
-        String sqlQuery = "INSERT INTO IncomeOutgo(Title, Value, Date, IncomeOrOutgo) VALUES (" +
-                "\"" + title + "\"," +
-                "\"" + value + "\"," +
-                "\"" + date + "\"," +
-                "\"" + incomeOrOutgo + "\")";
+        String sqlQuery = "INSERT INTO IncomeOutgo(Id, Title, Value, Date, Timestamp) VALUES (" +
+                "\"" + registry.id + "\"," +
+                "\"" + registry.title + "\"," +
+                "\"" + registry.value + "\"," +
+                "\"" + registry.date + "\"," +
+                "\"" + registry.timestamp + "\")";
 
-        db.execSQL(sqlQuery);
+        localDB.execSQL(sqlQuery);
 
     }
 
@@ -717,185 +731,32 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-   /*protected void showResults(ArrayList<Registration> registrations)
-    {
-        // Clears all table's rows.
-        TableLayout tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        int count = tableLayout.getChildCount();
-        for (int i = 0; i < count; i++)
-        {
-            View child = tableLayout.getChildAt(i);
-            if (child instanceof TableRowWithContextMenuInfo)
-                ((ViewGroup) child).removeAllViews();
-        }
-
-        Double balance = 0.0, income = 0.0, outgo = 0.0;
-
-        // Sets main information and proper rows.
-        for (Registration x : registrations)
-        {
-            addNewRow(x.title, x.value, x.date);
-            if (x.incomeOrOutgo == 0)
-                outgo -= Double.parseDouble(x.value);
-            else
-                income += Double.parseDouble(x.value);
-
-            balance += Double.parseDouble(x.value);
-
-        }
-        textViewBalance.setText(decimalFormat.format(balance).toString());
-        textViewIncome.setText(decimalFormat.format(income));
-        textViewOutgo.setText(decimalFormat.format(outgo));
-    }*/
-
-    public ArrayList<Registration> sendQuery(String sqlQuery)
+    public ArrayList<Registry> sendQueryToLocalDB(String sqlQuery)
     {
         createDatabaseIfNotExists();
 
         // Loads data from database.
-        ArrayList<Registration> registrations = new ArrayList<Registration>();
-        Cursor cursor = db.rawQuery(sqlQuery, null);
+        ArrayList<Registry> registries = new ArrayList<Registry>();
+        Cursor cursor = localDB.rawQuery(sqlQuery, null);
 
         if (cursor.moveToFirst())
         {
             do
             {
-                int id = cursor.getInt(cursor.getColumnIndex("Id"));
+                String id = cursor.getString(cursor.getColumnIndex("Id"));
                 String title = cursor.getString(cursor.getColumnIndex("Title"));
-                String value = cursor.getString(cursor.getColumnIndex("Value"));
+                float value = cursor.getFloat(cursor.getColumnIndex("Value"));
                 String date = cursor.getString(cursor.getColumnIndex("Date"));
-                int incomeOrOutgo = cursor.getInt(cursor.getColumnIndex("IncomeOrOutgo"));
-
-                registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
+                String timestamp = cursor.getString(cursor.getColumnIndex("Timestamp"));
+                registries.add(new Registry(id, title, value, date, timestamp));
 
             } while (cursor.moveToNext());
         }
 
-        return registrations;
+        return registries;
 
     }
 
-    public void saveAllDataToFile() throws IOException
-    {
-        createDatabaseIfNotExists();
-
-
-        // Loads data from database.
-        ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-
-        // First line is last modified time.
-        FileWriter writer = new FileWriter(BACKUP_FILEPATH);
-        DateFormat dateFormat = SDF;
-        Date date = new Date();
-        writer.write(dateFormat.format(date) + "\n"); //2016/11/16 12:08:43
-
-        // Rest of lines = data.
-        for (Registration x : registrations)
-            writer.write(x.id + "\n" + x.title + "\n" + x.value + "\n" + x.date + "\n" + x.incomeOrOutgo + "\n");
-
-        writer.flush();
-        writer.close();
-    }
-
-    public void onClickLoadFile(MenuItem item)
-    {
-        /*final Scanner scanner;
-        try
-        {
-            scanner = new Scanner(BACKUP_FILEPATH);
-            scanner.useDelimiter("\\n");
-        } catch (FileNotFoundException e)
-        {
-
-            String message = getString(R.string.info_about_restoring_1) + BACKUP_FILEPATH.getPath().toString() +
-                    getString(R.string.info_about_restoring_2) + "\n\n";
-
-            TextView showText = new TextView(this);
-            showText.setGravity(Gravity.CENTER);
-            showText.setTextSize(15);
-            showText.setTextColor(Color.BLACK);
-            showText.setText(message);
-            showText.setTextIsSelectable(true);
-
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getString(R.string.information));
-            builder.setView(showText);
-
-            AlertDialog dialog = builder.create();
-            dialog.show();
-            return;
-        }
-
-        // Clears all data.
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCancelable(false);
-        builder.setTitle(getString(R.string.warning));
-        builder.setMessage(getString(R.string.info_clear_all_question));
-        builder.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener()
-        {
-            @Override
-            public void onClick(DialogInterface dialog, int which)
-            {
-                deleteDatabase("Wallet");
-                textViewBalance.setText("0");
-                textViewIncome.setText("0");
-                textViewOutgo.setText("0");
-                ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-                showResults(registrations);
-
-
-                registrations = null;
-                scanner.nextLine(); // skip line with last modified time
-                while (scanner.hasNextLine())
-                {
-                    int id, incomeOrOutgo;
-                    String title, value, date;
-
-                    id = Integer.parseInt(scanner.nextLine());
-                    title = scanner.nextLine();
-                    value = scanner.nextLine();
-                    date = scanner.nextLine();
-                    incomeOrOutgo = Integer.parseInt(scanner.nextLine());
-
-                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-                }
-
-
-                // Sets main information and proper rows.
-
-                Double balance = 0.0, income = 0.0, outgo = 0.0;
-                for (Registration x : registrations)
-                {
-                    addNewRow(x.title, x.value, x.date);
-                    addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
-                    if (x.incomeOrOutgo == 0)
-                        outgo -= Double.parseDouble(x.value);
-                    else
-                        income += Double.parseDouble(x.value);
-
-                    balance += Double.parseDouble(x.value);
-                }
-                textViewBalance.setText(decimalFormat.format((balance)));
-                textViewIncome.setText(decimalFormat.format((income)));
-                textViewOutgo.setText(decimalFormat.format((outgo)));
-
-                Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener()
-        {
-            @Override
-            public void onClick(DialogInterface dialog, int which)
-            {
-                Toast.makeText(getBaseContext(), getString(R.string.info_canceled), Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        AlertDialog dialog = builder.create();
-        dialog.show();*/
-
-
-    }
 
     public void onClickChangeLanguage(MenuItem item)
     {
@@ -989,211 +850,6 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    public void synchData()
-    {
-        /*final File localFile = new File(Environment.getExternalStorageDirectory().toString() + "/MySimpleWalletBackup" + FILENAME);
-
-        // Creates backup folder.
-        if (!BACKUP_FOLDER.exists())
-            BACKUP_FOLDER.mkdirs(); // this will create folder.
-
-        try
-        {
-            downloadedFile = File.createTempFile("tempFromServer", null, BACKUP_FOLDER);
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-
-        // Load data from server.
-        serverFileRef = FirebaseStorage.getInstance().getReference();
-        localFileRef = serverFileRef.child(currentFirebaseUser.getUid() + FILENAME);
-        localFileRef.getFile(downloadedFile)
-                .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>()
-                {
-                    @Override
-                    public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot)
-                    {
-                        try
-                        {
-                            Scanner localScanner = null;
-                            Date dateLocalFile = null;
-                            Date dateServerFile = null;
-
-                            // Get time from server file.
-                            Scanner serverScanner = new Scanner(downloadedFile);
-                            serverScanner.useDelimiter("\\n");
-
-
-                            String serverDateS = serverScanner.nextLine();
-
-                            try
-                            {
-                                dateServerFile = SDF.parse(serverDateS);
-                            } catch (ParseException e)
-                            {
-                                e.printStackTrace();
-                            }
-
-                            if (localFile.length() != 0)
-                            {
-                                // Get time from local file.
-                                try
-                                {
-                                    localScanner = new Scanner(localFile);
-                                    localScanner.useDelimiter("\\n");
-                                } catch (FileNotFoundException e)
-                                {
-                                    e.printStackTrace();
-                                }
-
-                                ArrayList<Registration> registrations = new ArrayList<Registration>();
-                                String localDateS = localScanner.nextLine();
-                                dateLocalFile = null;
-                                try
-                                {
-                                    dateLocalFile = SDF.parse(localDateS);
-                                } catch (ParseException e)
-                                {
-                                    e.printStackTrace();
-                                }
-
-                                // If server backup is newer than local backup, use server backup, else use local backup.
-                                Log.d("pies", dateLocalFile.toString());
-                                Log.d("pies", dateServerFile.toString());
-
-                                if (dateServerFile.after(dateLocalFile))
-                                {
-
-                                    // Clears all data.
-                                    deleteDatabase("Wallet");
-                                    textViewBalance.setText("0");
-                                    textViewIncome.setText("0");
-                                    textViewOutgo.setText("0");
-                                    ArrayList<Registration> registrations1 = sendQuery("SELECT * FROM IncomeOutgo");
-                                    showResults(registrations1);
-
-                                    while (serverScanner.hasNextLine())
-                                    {
-                                        int id, incomeOrOutgo;
-                                        String title, value, date;
-                                        id = Integer.parseInt(serverScanner.nextLine());
-                                        title = serverScanner.nextLine();
-                                        value = serverScanner.nextLine();
-                                        date = serverScanner.nextLine();
-                                        incomeOrOutgo = Integer.parseInt(serverScanner.nextLine());
-
-                                        registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-                                    }
-
-                                    // Sets main information and proper rows.
-                                    Double balance = 0.0, income = 0.0, outgo = 0.0;
-                                    for (Registration x : registrations)
-                                    {
-                                        addNewRow(x.title, x.value, x.date);
-                                        addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
-                                        if (x.incomeOrOutgo == 0)
-                                            outgo -= Double.parseDouble(x.value);
-                                        else
-                                            income += Double.parseDouble(x.value);
-
-                                        balance += Double.parseDouble(x.value);
-
-                                    }
-                                    textViewBalance.setText(decimalFormat.format((balance)));
-                                    textViewIncome.setText(decimalFormat.format((income)));
-                                    textViewOutgo.setText(decimalFormat.format((outgo)));
-
-                                    Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
-
-                                    try
-                                    {
-                                        saveAllDataToFile(); // updates local file
-                                    } catch (IOException e)
-                                    {
-                                        e.printStackTrace();
-                                    }
-                                } else
-                                {
-                                    Log.d("pies", "local");
-
-                                    ArrayList<Registration> registrations1 = sendQuery("SELECT * FROM IncomeOutgo");
-                                    showResults(registrations1);
-                                    sendLocalFileToServer();
-                                }
-                            } else // If local backup is just created.
-                            {
-                                // Clears all data.
-                                deleteDatabase("Wallet");
-                                textViewBalance.setText("0");
-                                textViewIncome.setText("0");
-                                textViewOutgo.setText("0");
-                                ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-                                showResults(registrations);
-
-                                while (serverScanner.hasNextLine())
-                                {
-                                    int id, incomeOrOutgo;
-                                    String title, value, date;
-                                    id = Integer.parseInt(serverScanner.nextLine());
-                                    title = serverScanner.nextLine();
-                                    value = serverScanner.nextLine();
-                                    date = serverScanner.nextLine();
-                                    incomeOrOutgo = Integer.parseInt(serverScanner.nextLine());
-
-                                    registrations.add(new Registration(id, title, value, date, incomeOrOutgo));
-                                }
-
-                                // Sets main information and proper rows.
-                                Double balance = 0.0, income = 0.0, outgo = 0.0;
-                                for (Registration x : registrations)
-                                {
-                                    addNewRow(x.title, x.value, x.date);
-                                    addToDatabase(x.title, x.value, x.date, x.incomeOrOutgo);
-                                    if (x.incomeOrOutgo == 0)
-                                        outgo -= Double.parseDouble(x.value);
-                                    else
-                                        income += Double.parseDouble(x.value);
-
-                                    balance += Double.parseDouble(x.value);
-
-                                }
-                                textViewBalance.setText(decimalFormat.format((balance)));
-                                textViewIncome.setText(decimalFormat.format((income)));
-                                textViewOutgo.setText(decimalFormat.format((outgo)));
-
-                                Toast.makeText(getBaseContext(), getString(R.string.info_data_loaded), Toast.LENGTH_SHORT).show();
-
-                                try
-                                {
-                                    saveAllDataToFile(); // updates local file
-                                } catch (IOException e)
-                                {
-                                    e.printStackTrace();
-                                }
-                            }
-
-                        } catch (FileNotFoundException e)
-                        {
-                            e.printStackTrace();
-                        }
-                        downloadedFile.delete();
-                    }
-
-
-                })
-                .addOnFailureListener(new OnFailureListener()
-                {
-                    @Override
-                    public void onFailure(@NonNull Exception exception)
-                    {
-                        exception.printStackTrace();
-                        // Probably no needed.
-                    }
-                });
-*/
-    }
-
     public void onClickRefresh(MenuItem item)
     {/*
         ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
@@ -1206,48 +862,16 @@ public class MainActivity extends AppCompatActivity
 */
     }
 
-    public void sendLocalFileToServer()
-    {
-        if (currentFirebaseUser != null)
-        {
-            // Send backup file on server.
-            serverFileRef = FirebaseStorage.getInstance().getReference();
-            localFileRef = serverFileRef.child(currentFirebaseUser.getUid() + FILENAME);
-            UploadTask uploadTask = localFileRef.putFile(Uri.fromFile(BACKUP_FILEPATH));
-
-
-            // Register observers to listen for when the download is done or if it fails
-            uploadTask.addOnFailureListener(new OnFailureListener()
-            {
-                @Override
-                public void onFailure(@NonNull Exception exception)
-                {
-                    // Handle unsuccessful uploads
-                    exception.printStackTrace();
-
-                }
-            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>()
-            {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot)
-                {
-                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
-                    // ...
-                }
-            });
-        }
-
-    }
-
     private void createDatabaseIfNotExists()
     {
-        db = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
+        localDB = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
         String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                "Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                "Id VARCHAR PRIMARY KEY NOT NULL," +
                 "Title VARCHAR," +
-                "Value DOUBLE NOT NULL, Date DATE," +
-                "IncomeOrOutgo INTEGER NOT NULL)";
-        db.execSQL(sqlDB);
+                "Value FLOAT NOT NULL, " +
+                "Date DATE," +
+                "Timestamp BIGINT NOT NULL)";
+        localDB.execSQL(sqlDB);
     }
 
 

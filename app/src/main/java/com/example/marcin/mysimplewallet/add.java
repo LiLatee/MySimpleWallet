@@ -203,9 +203,9 @@ public class add extends AppCompatActivity
         if ( incomeOrOutgo == 0) value = -1 * Float.parseFloat(editTextValue.getText().toString());
         else value = Float.parseFloat(editTextValue.getText().toString());
 
-        Registry registryToAdd = new Registry(id, title, value, date);
+        Registry registryToAdd = new Registry(id, title, value, date, Long.toString(new Date().getTime()));
         database.child(id).setValue(registryToAdd);
-
+        MainActivity.addToDatabase(registryToAdd);
         Intent i = new Intent();
         setResult(RESULT_OK, i);
         finish();
