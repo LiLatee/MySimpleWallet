@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -36,7 +37,6 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
 import java.text.DecimalFormat;
@@ -67,7 +67,8 @@ public class MainActivity extends AppCompatActivity
     private  static final String TABLE_NAME = "IncomeOutgo";
 
 
-    public static SQLiteDatabase localDB;
+    public static LocalDatabase localDB;
+    public static RemoteDatabase remoteDB;
     private TextView textViewBalance, textViewIncome, textViewOutgo;
     private SharedPreferences settings;
     private String selectedLanguage = "-";
@@ -80,6 +81,7 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
 
         decimalFormat.applyPattern(".##");
+
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
@@ -96,8 +98,7 @@ public class MainActivity extends AppCompatActivity
         currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
         registries = new ArrayList<Registry>();
-        createDatabaseIfNotExists();
-
+        localDB = new LocalDatabase(openOrCreateDatabase("Wallet", MODE_PRIVATE, null), "Registries");
     }
 
     @Override
@@ -122,7 +123,12 @@ public class MainActivity extends AppCompatActivity
         {
             onClickAskForLogin(null);
         } else
+        {
+            if (remoteDB == null)remoteDB = new RemoteDatabase(currentFirebaseUser);
+            Log.d("koy", "1");
+            syncDataFromLocalToRemote();
             refreshTable();
+        }
 
     }
 
@@ -173,12 +179,84 @@ public class MainActivity extends AppCompatActivity
         textViewOutgo.setText(decimalFormat.format(outgo));
     }
 
+    public void syncDataFromLocalToRemote()
+    {
+        // If remoteDB is older.
 
+        Log.d("koy", "remote: " + remoteDB.getTimestamp());
+        Log.d("koy", "local: " + localDB.getTimestamp());
+
+        if (Long.parseLong(remoteDB.getTimestamp()) < Long.parseLong(localDB.getTimestamp()))
+        {
+            Log.d("koy", "nie chmura");
+            remoteDB.removeAll();
+            ArrayList<Registry> registries = localDB.getAllRegistries();
+            for (Registry registry : registries)
+                remoteDB.addRegistry(registry);
+        }
+        else if (Long.parseLong(remoteDB.getTimestamp()) > Long.parseLong(localDB.getTimestamp())
+                || Long.parseLong(remoteDB.getTimestamp()) == Long.parseLong(localDB.getTimestamp()) && localDB.getAllRegistries().size() == 0)
+        {
+            Log.d("koy", "chmura");
+
+            localDB.removeAll();
+            DatabaseReference db = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+            db.addValueEventListener(new ValueEventListener()
+            {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot)
+                {
+
+                    for (DataSnapshot child : dataSnapshot.getChildren())
+                    {
+                        Registry registry = child.getValue(Registry.class);
+                        localDB.addRegistry(registry);
+                    }
+                    refreshTable();
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError)
+                {
+                    //TODO
+                    //Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
+                }
+            });
+
+        }
+
+
+
+
+
+    }
 
     public void refreshTable()
     {
-        ConnectivityManager cm = (ConnectivityManager)getBaseContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        Float balance = 0.0f;
+        Float income = 0.0f;
+        Float outgo = 0.0f;
 
+        clearRows();
+
+        // Get data from localDB.
+        ArrayList<Registry> registries = localDB.getAllRegistries();
+        for (Registry registry : registries )
+        {
+            addNewRow(registry);
+            if (registry.value < 0)
+                outgo -= registry.value;
+            else
+                income += registry.value;
+            balance += registry.value;
+        }
+
+
+        textViewBalance.setText(decimalFormat.format(balance));
+        textViewIncome.setText(decimalFormat.format(income));
+        textViewOutgo.setText(decimalFormat.format(outgo));
+
+       /* ConnectivityManager cm = (ConnectivityManager)getBaseContext().getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
         boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
 
@@ -198,28 +276,20 @@ public class MainActivity extends AppCompatActivity
 
                     clearRows();
                     registries.clear();
-                    localDB.execSQL("DELETE from IncomeOutgo");
+                    //localDB.execSQL("DELETE from IncomeOutgo");
                     for (DataSnapshot child : dataSnapshot.getChildren())
                     {
                         Registry registry = child.getValue(Registry.class);
                         addNewRow(registry);
                         registries.add(registry);
-                        addToDatabase(registry);
+                        //addToDatabase(registry);
                         if (registry.value < 0)
                             outgo -= registry.value;
                         else
                             income += registry.value;
                         balance += registry.value;
                     }
-                    ArrayList <Registry> test = sendQueryToLocalDB("SELECT * FROM IncomeOutgo");
-                    for (Registry x : test)
-                    {
-                        Log.d("koy", x.id);
-                        Log.d("koy", x.title);
-                        Log.d("koy", Float.toString(x.value));
-                        Log.d("koy", x.date);
-                        Log.d("koy", x.timestamp);
-                    }
+
 
                     textViewBalance.setText(decimalFormat.format(balance));
                     textViewIncome.setText(decimalFormat.format(income));
@@ -232,18 +302,37 @@ public class MainActivity extends AppCompatActivity
                     Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
                 }
             });
-        }
-        else
+        }*/
+
+
+
+    }
+
+    private  void synchRemoteDbWithLocalDb()
+    {
+        /*ArrayList<Registry> registriesLocalDB = sendQueryToLocalDB("SELECT * FROM " + TABLE_NAME);
+        final ArrayList<Registry> registriesRemoteDB = new ArrayList<Registry>();
+
+        DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
+        database.addValueEventListener(new ValueEventListener()
         {
-            // Get data from localDB.
-            ArrayList<Registry> registries = sendQueryToLocalDB("SELECT * FROM " + TABLE_NAME);
-            for (Registry registry : registries )
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot)
             {
-                addNewRow(registry);
+                for (DataSnapshot child : dataSnapshot.getChildren())
+                {
+                    Registry registry = child.getValue(Registry.class);
+                    registriesRemoteDB.add(registry);
+                }
             }
-        }
 
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError)
+            {
+                Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
 
+            }
+        });*/
     }
 
     @Override
@@ -257,7 +346,12 @@ public class MainActivity extends AppCompatActivity
             {
                 currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
                 Toast.makeText(getBaseContext(), R.string.logged_up, Toast.LENGTH_SHORT).show();
+                remoteDB = new RemoteDatabase(currentFirebaseUser);
+                Log.d("koy", "2");
+
+                syncDataFromLocalToRemote();
                 refreshTable();
+
 
                 //synchData();
 
@@ -362,18 +456,6 @@ public class MainActivity extends AppCompatActivity
         tableLayout.addView(tableRow, 0);
     }
 
-    public static void addToDatabase(Registry registry)
-    {
-        String sqlQuery = "INSERT INTO IncomeOutgo(Id, Title, Value, Date, Timestamp) VALUES (" +
-                "\"" + registry.id + "\"," +
-                "\"" + registry.title + "\"," +
-                "\"" + registry.value + "\"," +
-                "\"" + registry.date + "\"," +
-                "\"" + registry.timestamp + "\")";
-
-        localDB.execSQL(sqlQuery);
-
-    }
 
     public void clearRows()
     {
@@ -711,6 +793,8 @@ public class MainActivity extends AppCompatActivity
                         {
                             if (child.getKey().equals(tableRow.getTag().toString()))
                             {
+                                Registry registry = child.getValue(Registry.class);
+                                localDB.removeRegistry(registry);
                                 child.getRef().removeValue();
                                 break;
                             }
@@ -729,32 +813,6 @@ public class MainActivity extends AppCompatActivity
             default:
                 return super.onContextItemSelected(item);
         }
-    }
-
-    public ArrayList<Registry> sendQueryToLocalDB(String sqlQuery)
-    {
-        createDatabaseIfNotExists();
-
-        // Loads data from database.
-        ArrayList<Registry> registries = new ArrayList<Registry>();
-        Cursor cursor = localDB.rawQuery(sqlQuery, null);
-
-        if (cursor.moveToFirst())
-        {
-            do
-            {
-                String id = cursor.getString(cursor.getColumnIndex("Id"));
-                String title = cursor.getString(cursor.getColumnIndex("Title"));
-                float value = cursor.getFloat(cursor.getColumnIndex("Value"));
-                String date = cursor.getString(cursor.getColumnIndex("Date"));
-                String timestamp = cursor.getString(cursor.getColumnIndex("Timestamp"));
-                registries.add(new Registry(id, title, value, date, timestamp));
-
-            } while (cursor.moveToNext());
-        }
-
-        return registries;
-
     }
 
 
@@ -810,8 +868,6 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickAskForLogin(MenuItem item)
     {
-        Log.d("koy", "...");
-
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.do_you_want_to_log_in);
         builder.setMessage(R.string.info_about_logging);
@@ -860,18 +916,6 @@ public class MainActivity extends AppCompatActivity
             synchData();
 
 */
-    }
-
-    private void createDatabaseIfNotExists()
-    {
-        localDB = openOrCreateDatabase("Wallet", MODE_PRIVATE, null);
-        String sqlDB = "CREATE TABLE IF NOT EXISTS IncomeOutgo (" +
-                "Id VARCHAR PRIMARY KEY NOT NULL," +
-                "Title VARCHAR," +
-                "Value FLOAT NOT NULL, " +
-                "Date DATE," +
-                "Timestamp BIGINT NOT NULL)";
-        localDB.execSQL(sqlDB);
     }
 
 

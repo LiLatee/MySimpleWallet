@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -34,16 +36,12 @@ public class add extends AppCompatActivity
     private EditText editTextTitle, editTextValue, editTextDate;
     private String selectedLanguage = null;
     private String id;
-    private Registry editRegistry;
-    private DatabaseReference database;
-    private FirebaseUser currentFirebaseUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add);
-
 
         // Language settings.
         selectedLanguage = getIntent().getExtras().getString("language");
@@ -72,43 +70,18 @@ public class add extends AppCompatActivity
         String dataS = formatter.format(date);
 
         editTextDate.setText(dataS);
+        
 
-        currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
-        database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
 
         // if edit mode.
         if (getIntent().getExtras().getString("edit?").equals("true"))
         {
             id = getIntent().getExtras().getString("id");
+            Registry registry = MainActivity.localDB.getRegistryById(id);
 
-            // search for proper registry by id
-            database.addValueEventListener(new ValueEventListener()
-            {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot)
-                {
-                    for (DataSnapshot child : dataSnapshot.getChildren())
-                    {
-                        if (child.getKey().equals(id))
-                        {
-                            editRegistry = child.getValue(Registry.class);
-                            break;
-                        }
-                    }
-
-                    editTextTitle.setText(editRegistry.title);
-                    editTextValue.setText(Float.toString(Math.abs(editRegistry.value)));
-                    editTextDate.setText(editRegistry.date);
-                }
-
-                @Override
-                public void onCancelled(DatabaseError databaseError)
-                {
-                    Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
-                }
-            });
-
-
+            editTextTitle.setText(registry.title);
+            editTextValue.setText(Float.toString(Math.abs(registry.value)));
+            editTextDate.setText(registry.date);
         }
 
     }
@@ -195,7 +168,7 @@ public class add extends AppCompatActivity
         if (getIntent().getExtras().getString("edit?").equals("true"))
             id = getIntent().getExtras().getString("id");
         else
-            id = database.push().getKey();
+            id = MainActivity.remoteDB.generateKey();
         String title = editTextTitle.getText().toString();
         float value;
         String date = editTextDate.getText().toString();
@@ -203,9 +176,29 @@ public class add extends AppCompatActivity
         if ( incomeOrOutgo == 0) value = -1 * Float.parseFloat(editTextValue.getText().toString());
         else value = Float.parseFloat(editTextValue.getText().toString());
 
+        ConnectivityManager cm = (ConnectivityManager)getBaseContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+
         Registry registryToAdd = new Registry(id, title, value, date, Long.toString(new Date().getTime()));
-        database.child(id).setValue(registryToAdd);
-        MainActivity.addToDatabase(registryToAdd);
+        if (isConnected)
+        {
+            //database.child(id).setValue(registryToAdd);
+            MainActivity.remoteDB.addRegistry(registryToAdd);
+            if (getIntent().getExtras().getString("edit?").equals("true"))
+                MainActivity.localDB.editRegistry(registryToAdd);
+            else
+                MainActivity.localDB.addRegistry(registryToAdd);
+
+        }
+        else
+        if (getIntent().getExtras().getString("edit?").equals("true"))
+            MainActivity.localDB.editRegistry(registryToAdd);
+        else
+            MainActivity.localDB.addRegistry(registryToAdd);
+
+
         Intent i = new Intent();
         setResult(RESULT_OK, i);
         finish();
