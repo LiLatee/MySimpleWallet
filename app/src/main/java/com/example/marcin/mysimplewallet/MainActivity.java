@@ -30,6 +30,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.auth.IdpResponse;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -58,13 +59,8 @@ public class MainActivity extends AppCompatActivity
     private static final int REQUEST_CODE_INCOME = 1;
     private static final int REQUEST_CODE_EDIT = 2;
     private static final int RC_SIGN_IN = 3;
-    private static final SimpleDateFormat SDF = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-    private static final File BACKUP_FOLDER = new File(Environment.getExternalStorageDirectory().toString(), "MySimpleWalletBackup");
-    private static final String FILENAME = "/backupMySimpleWallet";
-    private static final File BACKUP_FILEPATH = new File(BACKUP_FOLDER, FILENAME);
     private static final NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.US);
     private static DecimalFormat decimalFormat = (DecimalFormat) numberFormat;
-    private  static final String TABLE_NAME = "IncomeOutgo";
 
 
     public static LocalDatabase localDB;
@@ -73,7 +69,6 @@ public class MainActivity extends AppCompatActivity
     private SharedPreferences settings;
     private String selectedLanguage = "-";
     private FirebaseUser currentFirebaseUser;
-    private ArrayList<Registry> registries;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -81,7 +76,6 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
 
         decimalFormat.applyPattern(".##");
-
 
         // Language settings.
         settings = getPreferences(MODE_PRIVATE);
@@ -95,9 +89,6 @@ public class MainActivity extends AppCompatActivity
         textViewIncome = (TextView) findViewById(R.id.textViewIncomeValue);
         addHeaderRow();
 
-        currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
-
-        registries = new ArrayList<Registry>();
         localDB = new LocalDatabase(openOrCreateDatabase("Wallet", MODE_PRIVATE, null), "Registries");
     }
 
@@ -119,17 +110,16 @@ public class MainActivity extends AppCompatActivity
             settings.edit().putString("language", selectedLanguage).apply();
         }
 
+        currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentFirebaseUser == null && settings.getString("askForLogin", "yes").equals("yes"))
         {
             onClickAskForLogin(null);
         } else
         {
-            if (remoteDB == null)remoteDB = new RemoteDatabase(currentFirebaseUser);
-            Log.d("koy", "1");
+            if (remoteDB == null) remoteDB = new RemoteDatabase(currentFirebaseUser);
             syncDataFromLocalToRemote();
             refreshTable();
         }
-
     }
 
     public void onClickOutgo(View view)
@@ -181,11 +171,11 @@ public class MainActivity extends AppCompatActivity
 
     public void syncDataFromLocalToRemote()
     {
-        // If remoteDB is older.
 
         Log.d("koy", "remote: " + remoteDB.getTimestamp());
         Log.d("koy", "local: " + localDB.getTimestamp());
 
+        // If remoteDB is older.
         if (Long.parseLong(remoteDB.getTimestamp()) < Long.parseLong(localDB.getTimestamp()))
         {
             Log.d("koy", "nie chmura");
@@ -201,7 +191,7 @@ public class MainActivity extends AppCompatActivity
 
             localDB.removeAll();
             DatabaseReference db = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
-            db.addValueEventListener(new ValueEventListener()
+            db.addListenerForSingleValueEvent(new ValueEventListener()
             {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot)
@@ -224,10 +214,6 @@ public class MainActivity extends AppCompatActivity
             });
 
         }
-
-
-
-
 
     }
 
@@ -255,84 +241,6 @@ public class MainActivity extends AppCompatActivity
         textViewBalance.setText(decimalFormat.format(balance));
         textViewIncome.setText(decimalFormat.format(income));
         textViewOutgo.setText(decimalFormat.format(outgo));
-
-       /* ConnectivityManager cm = (ConnectivityManager)getBaseContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
-
-        // Get data from server.
-        if (isConnected)
-        {
-            registries = new ArrayList<Registry>();
-            DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
-            database.addValueEventListener(new ValueEventListener()
-            {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot)
-                {
-                    Float balance = 0.0f;
-                    Float income = 0.0f;
-                    Float outgo = 0.0f;
-
-                    clearRows();
-                    registries.clear();
-                    //localDB.execSQL("DELETE from IncomeOutgo");
-                    for (DataSnapshot child : dataSnapshot.getChildren())
-                    {
-                        Registry registry = child.getValue(Registry.class);
-                        addNewRow(registry);
-                        registries.add(registry);
-                        //addToDatabase(registry);
-                        if (registry.value < 0)
-                            outgo -= registry.value;
-                        else
-                            income += registry.value;
-                        balance += registry.value;
-                    }
-
-
-                    textViewBalance.setText(decimalFormat.format(balance));
-                    textViewIncome.setText(decimalFormat.format(income));
-                    textViewOutgo.setText(decimalFormat.format(outgo));
-                }
-
-                @Override
-                public void onCancelled(DatabaseError databaseError)
-                {
-                    Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }*/
-
-
-
-    }
-
-    private  void synchRemoteDbWithLocalDb()
-    {
-        /*ArrayList<Registry> registriesLocalDB = sendQueryToLocalDB("SELECT * FROM " + TABLE_NAME);
-        final ArrayList<Registry> registriesRemoteDB = new ArrayList<Registry>();
-
-        DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
-        database.addValueEventListener(new ValueEventListener()
-        {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot)
-            {
-                for (DataSnapshot child : dataSnapshot.getChildren())
-                {
-                    Registry registry = child.getValue(Registry.class);
-                    registriesRemoteDB.add(registry);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError)
-            {
-                Toast.makeText(getBaseContext(), "The read failed: " + databaseError.getCode(), Toast.LENGTH_SHORT).show();
-
-            }
-        });*/
     }
 
     @Override
@@ -342,18 +250,15 @@ public class MainActivity extends AppCompatActivity
         // Login activity.
         if (requestCode == RC_SIGN_IN)
         {
+            IdpResponse response = IdpResponse.fromResultIntent(Data);
             if (resultCode == RESULT_OK)
             {
                 currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
                 Toast.makeText(getBaseContext(), R.string.logged_up, Toast.LENGTH_SHORT).show();
                 remoteDB = new RemoteDatabase(currentFirebaseUser);
-                Log.d("koy", "2");
-
                 syncDataFromLocalToRemote();
                 refreshTable();
 
-
-                //synchData();
 
             } else
             {
@@ -475,26 +380,10 @@ public class MainActivity extends AppCompatActivity
 
     public void onClickTitle(View view)
     {
-
-        /*String sqlQuery = null;
         if (titleState == 0)
         {
             titleState = 1;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Title ASC";
-        } else
-        {
-            titleState = 0;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Title DESC";
-        }
-
-        createDatabaseIfNotExists();
-
-        ArrayList<Registration> registrations = sendQuery(sqlQuery);*/
-
-        if (titleState == 0)
-        {
-            titleState = 1;
-            Collections.sort(registries, new Comparator<Registry>()
+            Collections.sort(localDB.getAllRegistries(), new Comparator<Registry>()
             {
                 @Override
                 public int compare(Registry o1, Registry o2)
@@ -506,7 +395,7 @@ public class MainActivity extends AppCompatActivity
         } else
         {
             titleState = 0;
-            Collections.sort(registries, new Comparator<Registry>()
+            Collections.sort(localDB.getAllRegistries(), new Comparator<Registry>()
             {
                 @Override
                 public int compare(Registry o1, Registry o2)
@@ -518,32 +407,17 @@ public class MainActivity extends AppCompatActivity
         }
 
         clearRows();
-        for (Registry x : registries)
+        for (Registry x : localDB.getAllRegistries())
             addNewRow(x);
-        // for (Registration x : registrations)
-        //    addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickValue(View view)
     {
-        /*String sqlQuery = null;
+
         if (valueState == 0)
         {
             valueState = 1;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value ASC";
-        } else
-        {
-            valueState = 0;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Value DESC";
-        }
-
-        createDatabaseIfNotExists();
-
-        ArrayList<Registration> registrations = sendQuery(sqlQuery);*/
-        if (valueState == 0)
-        {
-            valueState = 1;
-            Collections.sort(registries, new Comparator<Registry>()
+            Collections.sort(localDB.getAllRegistries(), new Comparator<Registry>()
             {
                 @Override
                 public int compare(Registry o1, Registry o2)
@@ -559,7 +433,7 @@ public class MainActivity extends AppCompatActivity
         } else
         {
             valueState = 0;
-            Collections.sort(registries, new Comparator<Registry>()
+            Collections.sort(localDB.getAllRegistries(), new Comparator<Registry>()
             {
                 @Override
                 public int compare(Registry o1, Registry o2)
@@ -575,35 +449,17 @@ public class MainActivity extends AppCompatActivity
         }
 
         clearRows();
-        for (Registry x : registries)
+        for (Registry x : localDB.getAllRegistries())
             addNewRow(x);
 
-        // for (Registration x : registrations)
-        //addNewRow(x.title, x.value, x.date);
     }
 
     public void onClickDate(View view)
     {
-        /*String sqlQuery = null;
         if (dateState == 0)
         {
             dateState = 1;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Date ASC";
-        } else
-        {
-            dateState = 0;
-            sqlQuery = "SELECT * FROM IncomeOutgo ORDER BY Date DESC";
-        }
-
-        createDatabaseIfNotExists();
-
-        ArrayList<Registration> registrations = sendQuery(sqlQuery);*/
-
-
-        if (dateState == 0)
-        {
-            dateState = 1;
-            Collections.sort(registries, new Comparator<Registry>()
+            Collections.sort(localDB.getAllRegistries(), new Comparator<Registry>()
             {
                 @Override
                 public int compare(Registry o1, Registry o2)
@@ -615,7 +471,7 @@ public class MainActivity extends AppCompatActivity
         } else
         {
             dateState = 0;
-            Collections.sort(registries, new Comparator<Registry>()
+            Collections.sort(localDB.getAllRegistries(), new Comparator<Registry>()
             {
                 @Override
                 public int compare(Registry o1, Registry o2)
@@ -626,7 +482,7 @@ public class MainActivity extends AppCompatActivity
             });
         }
         clearRows();
-        for (Registry x : registries)
+        for (Registry x : localDB.getAllRegistries())
             addNewRow(x);
         //for (Registration x : registrations)
         //addNewRow(x.title, x.value, x.date);
@@ -712,11 +568,8 @@ public class MainActivity extends AppCompatActivity
             public boolean onQueryTextChange(String s)
             {
 
-                //String sqlQuery = "SELECT * FROM IncomeOutgo WHERE Title LIKE '%" + s + "%'";
-                //ArrayList<Registration> registrations = sendQuery(sqlQuery);
-                //showResults(registrations);
                 clearRows();
-                for (Registry x : registries)
+                for (Registry x : localDB.getAllRegistries())
                 {
                     if (x.title.matches("(.*)" + s + "(.*)"))
                         addNewRow(x);
@@ -739,25 +592,14 @@ public class MainActivity extends AppCompatActivity
         inflater.inflate(R.menu.context_menu, menu);
     }
 
-    private TableRow tableRowToEditDelete;
-
     @Override
     public boolean onContextItemSelected(MenuItem item)
     {
         TableRowWithContextMenuInfo.TableRowContextMenuInfo menuInfo = (TableRowWithContextMenuInfo.TableRowContextMenuInfo) item.getMenuInfo();
         final TableRowWithContextMenuInfo tableRow = (TableRowWithContextMenuInfo) menuInfo.targetView;
 
-        tableRowToEditDelete = tableRow;
-        TableLayout tableLayout = (TableLayout) tableRow.getParent();
-
-        TextView textViewTitle = (TextView) tableRow.getChildAt(0);
         TextView textViewValue = (TextView) tableRow.getChildAt(1);
-        TextView textViewDate = (TextView) tableRow.getChildAt(2);
-
-        String title = textViewTitle.getText().toString();
         String value = textViewValue.getText().toString();
-
-        String date = textViewDate.getText().toString();
 
         switch (item.getItemId())
         {
@@ -784,7 +626,7 @@ public class MainActivity extends AppCompatActivity
             {
                 DatabaseReference database = FirebaseDatabase.getInstance().getReference("users/" + currentFirebaseUser.getUid());
 
-                database.addValueEventListener(new ValueEventListener()
+                database.addListenerForSingleValueEvent(new ValueEventListener()
                 {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot)
@@ -904,18 +746,6 @@ public class MainActivity extends AppCompatActivity
         dialog.show();
 
 
-    }
-
-    public void onClickRefresh(MenuItem item)
-    {/*
-        ArrayList<Registration> registrations = sendQuery("SELECT * FROM IncomeOutgo");
-        showResults(registrations);
-
-        // Checks if exists newer version.
-        if (currentFirebaseUser != null)
-            synchData();
-
-*/
     }
 
 

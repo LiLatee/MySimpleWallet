@@ -190,13 +190,15 @@ public class add extends AppCompatActivity
                 MainActivity.localDB.editRegistry(registryToAdd);
             else
                 MainActivity.localDB.addRegistry(registryToAdd);
-
         }
         else
-        if (getIntent().getExtras().getString("edit?").equals("true"))
-            MainActivity.localDB.editRegistry(registryToAdd);
-        else
-            MainActivity.localDB.addRegistry(registryToAdd);
+        {
+            if (getIntent().getExtras().getString("edit?").equals("true"))
+                MainActivity.localDB.editRegistry(registryToAdd);
+            else
+                MainActivity.localDB.addRegistry(registryToAdd);
+        }
+
 
 
         Intent i = new Intent();

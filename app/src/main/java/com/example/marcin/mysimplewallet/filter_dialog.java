@@ -38,8 +38,6 @@ public class filter_dialog extends DialogFragment
     private RadioGroup radioGroup;
     private EditText ediTextFrom, editTextTo;
     private View dialogView;
-    private SQLiteDatabase db;
-    private ArrayList<Registry> registries;
     private FirebaseUser currentFirebaseUser;
 
 
@@ -47,8 +45,6 @@ public class filter_dialog extends DialogFragment
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
     {
-        // Data
-        registries = new ArrayList<Registry>();
         currentFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
 
         dialogView = inflater.inflate(R.layout.filter, container, false);
@@ -158,17 +154,16 @@ public class filter_dialog extends DialogFragment
                         @Override
                         public void onDataChange(DataSnapshot dataSnapshot) {
 
-                            registries.clear();
+                            MainActivity.localDB.getAllRegistries().clear();
                             for (DataSnapshot child : dataSnapshot.getChildren())
                             {
                                 Registry registry = child.getValue(Registry.class);
-                                Log.d("koy", registry.title);
 
                                 // If registry.date is between firstDate and secondDate
                                 if (new Date(registry.date).compareTo(firstDate) >= 0 && new Date(registry.date).compareTo(secondDate) <= 0 )
-                                    registries.add(registry);
+                                    MainActivity.localDB.getAllRegistries().add(registry);
                             }
-                            ((MainActivity)getActivity()).refreshTable(registries);
+                            ((MainActivity)getActivity()).refreshTable( MainActivity.localDB.getAllRegistries());
 
                         }
 
@@ -199,16 +194,16 @@ public class filter_dialog extends DialogFragment
                         @Override
                         public void onDataChange(DataSnapshot dataSnapshot) {
 
-                            registries.clear();
+                            MainActivity.localDB.getAllRegistries().clear();
                             for (DataSnapshot child : dataSnapshot.getChildren())
                             {
                                 Registry registry = child.getValue(Registry.class);
                                 // If registry.value is between value1 and value2
                                 if (Math.abs(registry.value) >= Float.parseFloat(value1) && Math.abs(registry.value) <= Float.parseFloat(value2) )
-                                    registries.add(registry);
+                                    MainActivity.localDB.getAllRegistries().add(registry);
 
                             }
-                            ((MainActivity)getActivity()).refreshTable(registries);
+                            ((MainActivity)getActivity()).refreshTable( MainActivity.localDB.getAllRegistries());
 
 
                         }

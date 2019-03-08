@@ -46,8 +46,6 @@ public class LocalDatabase extends AppCompatActivity
 
 
         timestamp = registry.timestamp;
-        Log.d("koy", registry.id + " id");
-
         db.execSQL(sqlQuery);
     }
 
@@ -107,7 +105,7 @@ public class LocalDatabase extends AppCompatActivity
 
     public String getTimestamp()
     {
-        /*ArrayList<Registry> registries = getAllRegistries();
+        ArrayList<Registry> registries = getAllRegistries();
         Long timestamp = 0L;
         for (Registry registry : registries)
         {
@@ -115,8 +113,8 @@ public class LocalDatabase extends AppCompatActivity
             if (temp > timestamp)
                 timestamp = temp;
         }
-        return Long.toString(timestamp);*/
-        return timestamp;
+        return Long.toString(timestamp);
+        //return timestamp;
     }
 
     public Registry getRegistryById(String ID)
